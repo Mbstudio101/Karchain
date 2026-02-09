@@ -1,0 +1,13 @@
+INFO:scrapers.fanduel_scraper:Browser launched.
+INFO:NicheTest:Targeting game detail: https://sportsbook.fanduel.com/basketball/nba/detroit-pistons-@-charlotte-hornets-35025251
+INFO:scrapers.fanduel_scraper:Deep scraping: https://sportsbook.fanduel.com/basketball/nba/detroit-pistons-@-charlotte-hornets-35025251
+WARNING:scrapers.fanduel_scraper:Market Player Points not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+WARNING:scrapers.fanduel_scraper:Market Player Threes not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+WARNING:scrapers.fanduel_scraper:Market Player Rebounds not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+WARNING:scrapers.fanduel_scraper:Market Player Assists not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+WARNING:scrapers.fanduel_scraper:Market Player Combos not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+WARNING:scrapers.fanduel_scraper:Market Player Defense not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+WARNING:scrapers.fanduel_scraper:Market First Basket not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+WARNING:scrapers.fanduel_scraper:Market Double Result not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+WARNING:scrapers.fanduel_scraper:Market Odd/Even not found as Tab or Accordion for Detroit Pistons @ Charlotte Hornets
+INFO:NicheTest:Test scrape complete.

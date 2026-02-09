@@ -1,0 +1,60 @@
+INFO:__main__:Browser launched.
+INFO:__main__:Navigating to https://ma.sportsbook.fanduel.com/navigation/nba...
+INFO:__main__:Navigated. Waiting for odds to load...
+INFO:__main__:Successfully loaded NBA page. Saved state.
+INFO:__main__:Found 10 games with 'More wagers' links.
+INFO:__main__:Main odds for Detroit Pistons @ Charlotte Hornets
+INFO:__main__:Saved odds for game 6
+INFO:__main__:Deep scraping: https://ma.sportsbook.fanduel.com/basketball/nba/detroit-pistons-@-charlotte-hornets-35237177
+INFO:__main__:Switched to Player Points tab.
+INFO:__main__:Extracted 0 props for Player Points
+INFO:__main__:Switched to Player Threes tab.
+INFO:__main__:Extracted 0 props for Player Threes
+INFO:__main__:Switched to Player Rebounds tab.
+INFO:__main__:Extracted 0 props for Player Rebounds
+INFO:__main__:Switched to Player Assists tab.
+INFO:__main__:Extracted 0 props for Player Assists
+INFO:__main__:Switched to Player Combos tab.
+INFO:__main__:Extracted 0 props for Player Combos
+INFO:__main__:Switched to Player Defense tab.
+INFO:__main__:Extracted 0 props for Player Defense
+INFO:__main__:Main odds for Chicago Bulls @ Brooklyn Nets
+INFO:__main__:Saved odds for game 7
+INFO:__main__:Deep scraping: https://ma.sportsbook.fanduel.com/basketball/nba/chicago-bulls-@-brooklyn-nets-35237229
+WARNING:__main__:Tab Player Points not found or failed for Brooklyn Nets
+WARNING:__main__:Tab Player Threes not found or failed for Brooklyn Nets
+WARNING:__main__:Tab Player Rebounds not found or failed for Brooklyn Nets
+WARNING:__main__:Tab Player Assists not found or failed for Brooklyn Nets
+WARNING:__main__:Tab Player Combos not found or failed for Brooklyn Nets
+WARNING:__main__:Tab Player Defense not found or failed for Brooklyn Nets
+INFO:__main__:Main odds for Utah Jazz @ Miami Heat
+INFO:__main__:Saved odds for game 8
+INFO:__main__:Deep scraping: https://ma.sportsbook.fanduel.com/basketball/nba/utah-jazz-@-miami-heat-35237246
+WARNING:__main__:Tab Player Points not found or failed for Miami Heat
+WARNING:__main__:Tab Player Threes not found or failed for Miami Heat
+WARNING:__main__:Tab Player Rebounds not found or failed for Miami Heat
+WARNING:__main__:Tab Player Assists not found or failed for Miami Heat
+WARNING:__main__:Tab Player Combos not found or failed for Miami Heat
+WARNING:__main__:Tab Player Defense not found or failed for Miami Heat
+INFO:__main__:Main odds for Milwaukee Bucks @ Orlando Magic
+INFO:__main__:Saved odds for game 9
+INFO:__main__:Deep scraping: https://ma.sportsbook.fanduel.com/basketball/nba/milwaukee-bucks-@-orlando-magic-35237262
+WARNING:__main__:Tab Player Points not found or failed for Orlando Magic
+WARNING:__main__:Tab Player Threes not found or failed for Orlando Magic
+WARNING:__main__:Tab Player Rebounds not found or failed for Orlando Magic
+WARNING:__main__:Tab Player Assists not found or failed for Orlando Magic
+WARNING:__main__:Tab Player Combos not found or failed for Orlando Magic
+WARNING:__main__:Tab Player Defense not found or failed for Orlando Magic
+INFO:__main__:Main odds for Sacramento Kings @ New Orleans Pelicans
+INFO:__main__:Saved odds for game 11
+INFO:__main__:Deep scraping: https://ma.sportsbook.fanduel.com/basketball/nba/sacramento-kings-@-new-orleans-pelicans-35237394
+WARNING:__main__:Tab Player Points not found or failed for New Orleans Pelicans
+WARNING:__main__:Tab Player Threes not found or failed for New Orleans Pelicans
+WARNING:__main__:Tab Player Rebounds not found or failed for New Orleans Pelicans
+WARNING:__main__:Tab Player Assists not found or failed for New Orleans Pelicans
+WARNING:__main__:Tab Player Combos not found or failed for New Orleans Pelicans
+WARNING:__main__:Tab Player Defense not found or failed for New Orleans Pelicans
+INFO:__main__:Main odds for Atlanta Hawks @ Minnesota Timberwolves
+INFO:__main__:Saved odds for game 10
+INFO:__main__:Deep scraping: https://ma.sportsbook.fanduel.com/basketball/nba/atlanta-hawks-@-minnesota-timberwolves-35237399
+WARNING:__main__:Tab Player Points not found or failed for Minnesota Timberwolves

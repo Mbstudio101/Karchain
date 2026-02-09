@@ -1,0 +1,318 @@
+
+
+# **Sports Betting Recommendation System - Complete Project Specification**
+
+## **Project Overview**
+Build a production-ready, end-to-end system that scrapes player statistics and game data from sports websites, stores it in a database, and provides intelligent betting recommendations by analyzing FanDuel odds against historical performance data.
+
+Framless window with custom title bar and window controls for macos fully functional
+
+Beautiful UI with dark mode and light mode with 
+
+cunstom Sidebar menu button
+
+## **Core Requirements**
+
+### **1. Data Scraping Module**
+
+**Sports Coverage:**
+- Basketball (NBA)
+- Football (NFL)  
+- Baseball (MLB)
+
+**Data to Extract:**
+- Player statistics (points, rebounds, assists, batting average, etc.)
+- Team statistics
+- Injury reports
+- Game schedules (upcoming games, opponents)
+- Historical performance data
+- Team strengths/weaknesses analysis
+- Head-to-head matchup history
+
+**Technical Requirements:**
+- Use Playwright or Selenium for JavaScript-heavy sites
+- Implement respectful rate limiting (delays between requests)
+- Handle dynamic content loading
+- Include robust error handling for site changes
+- Log all scraping activities
+- Implement retry logic for failed requests
+- Support multiple data sources per sport for redundancy
+
+**Data Sources (Examples):**
+- ESPN.com
+- NBA.com, NFL.com, MLB.com
+- Basketball-Reference.com
+- Pro-Football-Reference.com
+- Baseball-Reference.com
+
+### **2. FanDuel Odds Scraper**
+
+**Requirements:**
+- Scrape current betting odds and lines
+- Extract available bet types (moneyline, spread, over/under, props, parlays)
+- Capture live odds updates
+- Handle user authentication (login capability)
+- Extract available parlay combinations
+- Identify boosted odds or promotions
+
+**Technical Considerations:**
+- Must handle dynamic JavaScript loading
+- Respect rate limits to avoid IP blocking
+- Implement session management for logged-in scraping
+- Cache odds data with timestamps
+
+### **3. Database Design**
+
+**Technology:** PostgreSQL (or similar relational database)
+
+**Schema Requirements:**
+
+**Players Table:**
+- player_id (primary key)
+- name
+- team
+- position
+- sport
+- active_status
+
+**Player_Stats Table:**
+- stat_id (primary key)
+- player_id (foreign key)
+- game_date
+- opponent
+- points/yards/hits (sport-specific metrics)
+- rebounds/tackles/RBIs
+- assists
+- minutes_played
+- shooting_percentages
+- timestamp
+
+**Teams Table:**
+- team_id (primary key)
+- team_name
+- sport
+- conference/division
+- current_record
+
+**Games Table:**
+- game_id (primary key)
+- home_team_id
+- away_team_id
+- game_date
+- game_time
+- venue
+- sport
+
+**Injuries Table:**
+- injury_id (primary key)
+- player_id
+- injury_type
+- status (out, questionable, probable)
+- updated_date
+
+**Betting_Odds Table:**
+- odds_id (primary key)
+- game_id
+- bet_type
+- line
+- odds
+- source (FanDuel)
+- timestamp
+- expiration
+
+**Recommendations Table:**
+- recommendation_id (primary key)
+- game_id
+- bet_type
+- recommended_pick
+- confidence_score
+- reasoning
+- timestamp
+
+### **4. Data Processing & API Layer**
+
+**Requirements:**
+- RESTful API to serve data
+- Endpoints for:
+  - Get player stats by player/team/date range
+  - Get upcoming games
+  - Get injury reports
+  - Get current odds
+  - Get recommendations
+- Data validation and cleaning
+- Normalization of scraped data
+- Handle missing or inconsistent data
+
+**API Endpoints (Examples):**
+```
+GET /api/players/{sport}
+GET /api/players/{player_id}/stats
+GET /api/games/upcoming
+GET /api/injuries/current
+GET /api/odds/{game_id}
+GET /api/recommendations/{sport}
+POST /api/analyze-bet
+```
+
+### **5. Recommendation Engine**
+
+**Analysis Logic:**
+- Compare player recent performance (last 5-10 games) against historical averages
+- Factor in opponent defensive/offensive rankings
+- Consider home/away splits
+- Account for injury reports
+- Analyze head-to-head matchup history
+- Calculate value bets (where odds don't match probability)
+- Identify correlated parlay opportunities
+
+**Output:**
+- Ranked list of recommended bets
+- Confidence score (1-10 or percentage)
+- Detailed reasoning for each pick
+- Risk assessment
+- Suggested parlay combinations
+- Expected value calculations
+
+**Recommendation Criteria:**
+- Statistical edge threshold (minimum advantage)
+- Recent form weighting
+- Injury impact assessment
+- Matchup favorability scoring
+
+### **6. Scheduler & Automation**
+
+**Requirements:**
+- Cron jobs or task scheduler (Celery, APScheduler)
+- Daily scraping schedule:
+  - Player stats: After games complete
+  - Injury reports: Multiple times daily
+  - Game schedules: Weekly
+  - Odds: Every 1-4 hours (configurable)
+- Database backup automation
+- Data freshness monitoring
+- Alert system for scraper failures
+
+### **7. User Interface (Optional but Recommended)**
+
+**Web Dashboard:**
+- Login page
+- Display upcoming games with recommendations
+- Show player stats and trends
+- Visualize confidence scores
+- Parlay builder interface
+- Historical performance tracking
+- Settings for notification preferences
+
+**Technology Stack Options:**
+- Frontend: React, Vue.js, or simple HTML/JS
+- Backend: Flask, FastAPI, or Django
+- Styling: Tailwind CSS or Bootstrap
+
+### **8. Error Handling & Monitoring**
+
+**Requirements:**
+- Comprehensive logging (all scraping, API calls, errors)
+- Email/SMS alerts for critical failures
+- Graceful degradation when data sources unavailable
+- Data validation checks
+- Automated health checks
+- Performance monitoring
+
+**Error Scenarios to Handle:**
+- Website structure changes
+- Network timeouts
+- Rate limiting/IP blocking
+- Missing data fields
+- Database connection failures
+- Authentication failures
+
+### **9. Security & Compliance**
+
+**Requirements:**
+- Secure credential storage (environment variables, secrets manager)
+- HTTPS for all API communications
+- Input validation and sanitization
+- Rate limiting on API endpoints
+- User authentication (if multi-user)
+- Comply with website terms of service
+- No automated bet placement (manual execution only)
+
+### **10. Deployment & Infrastructure**
+
+**Production Requirements:**
+- Containerization (Docker)
+- Deployment platform (AWS, Google Cloud, DigitalOcean, or Heroku)
+- Database hosting with backups
+- Environment configuration (dev, staging, prod)
+- CI/CD pipeline (optional but recommended)
+- Scalability considerations
+
+**Recommended Stack:**
+- Python 3.10+
+- PostgreSQL 14+
+- Redis (for caching)
+- Nginx (reverse proxy)
+- Docker & Docker Compose
+
+## **Development Phases**
+
+**Phase 1: Foundation**
+- Set up project structure
+- Initialize database
+- Build scraper for one sport (NBA recommended)
+- Create basic data models
+
+**Phase 2: Data Pipeline**
+- Complete scrapers for all sports
+- Implement scheduler
+- Build data cleaning/normalization
+- Set up logging
+
+**Phase 3: Analysis Engine**
+- Develop recommendation algorithms
+- Create API endpoints
+- Build FanDuel odds integration
+- Implement confidence scoring
+
+**Phase 4: User Interface**
+- Build dashboard
+- Create recommendation display
+- Add parlay builder
+- Implement user settings
+
+**Phase 5: Production Hardening**
+- Comprehensive error handling
+- Performance optimization
+- Security audit
+- Documentation
+- Deployment
+
+## **Testing Requirements**
+
+- Unit tests for all scraping functions
+- Integration tests for database operations
+- API endpoint testing
+- End-to-end recommendation flow testing
+- Load testing for scalability
+- Data accuracy validation
+
+## **Documentation Needs**
+
+- System architecture diagram
+- API documentation
+- Database schema documentation
+- Deployment guide
+- User manual
+- Maintenance procedures
+
+## **Success Metrics**
+
+- Scraping success rate >95%
+- Data freshness <1 hour for odds
+- Recommendation accuracy tracking
+- System uptime >99%
+- API response time <500ms
+
+---
+
+**This is a production-ready specification. Hand this to your AI coder and emphasize: no placeholders, no incomplete functions, full error handling, and production-grade code quality.**

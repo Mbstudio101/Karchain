@@ -1,0 +1,46 @@
+INFO:MasterSync:=== Starting Master Sync Cycle ===
+INFO:MasterSync:Step 1: Syncing ESPN Game Data & Player Stats...
+INFO:scrapers.espn_sync:Starting ESPN status sync for 20260209...
+INFO:scrapers.espn_sync:Updating game 6: Detroit Pistons @ Charlotte Hornets -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 7: Chicago Bulls @ Brooklyn Nets -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 8: Utah Jazz @ Miami Heat -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 9: Milwaukee Bucks @ Orlando Magic -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 10: Atlanta Hawks @ Minnesota Timberwolves -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 11: Sacramento Kings @ New Orleans Pelicans -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 12: Cleveland Cavaliers @ Denver Nuggets -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 13: Memphis Grizzlies @ Golden State Warriors -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 14: Oklahoma City Thunder @ Los Angeles Lakers -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 15: Philadelphia 76ers @ Portland Trail Blazers -> Scheduled (0-0)
+INFO:scrapers.espn_sync:ESPN status sync complete for 20260209.
+INFO:scrapers.espn_sync:Starting ESPN status sync for 20260210...
+INFO:scrapers.espn_sync:Updating game 16: Indiana Pacers @ New York Knicks -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 35: LA Clippers @ Houston Rockets -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 18: Dallas Mavericks @ Phoenix Suns -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 19: San Antonio Spurs @ Los Angeles Lakers -> Scheduled (0-0)
+INFO:scrapers.espn_sync:ESPN status sync complete for 20260210.
+INFO:scrapers.espn_sync:Starting ESPN status sync for 20260211...
+INFO:scrapers.espn_sync:Updating game 20: Atlanta Hawks @ Charlotte Hornets -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 21: Washington Wizards @ Cleveland Cavaliers -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 22: Milwaukee Bucks @ Orlando Magic -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 23: Chicago Bulls @ Boston Celtics -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 24: Indiana Pacers @ Brooklyn Nets -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 25: New York Knicks @ Philadelphia 76ers -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 26: Detroit Pistons @ Toronto Raptors -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 36: LA Clippers @ Houston Rockets -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 28: Portland Trail Blazers @ Minnesota Timberwolves -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 29: Miami Heat @ New Orleans Pelicans -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 30: Oklahoma City Thunder @ Phoenix Suns -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 31: Sacramento Kings @ Utah Jazz -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 32: Memphis Grizzlies @ Denver Nuggets -> Scheduled (0-0)
+INFO:scrapers.espn_sync:Updating game 33: San Antonio Spurs @ Golden State Warriors -> Scheduled (0-0)
+INFO:scrapers.espn_sync:ESPN status sync complete for 20260211.
+INFO:MasterSync:ESPN Sync Complete.
+INFO:MasterSync:Step 2: Scrapping FanDuel Odds...
+INFO:scrapers.fanduel_scraper:Browser launched.
+ERROR:scrapers.fanduel_scraper:Navigation error on attempt 1: name 'url' is not defined
+ERROR:scrapers.fanduel_scraper:Navigation error on attempt 2: name 'url' is not defined
+ERROR:scrapers.fanduel_scraper:Navigation error on attempt 3: name 'url' is not defined
+INFO:MasterSync:FanDuel Scrape Complete.
+INFO:MasterSync:Step 3: Refreshing AI Recommendations...
+INFO:MasterSync:AI Analysis Refresh Complete.
+INFO:MasterSync:=== Master Sync Cycle Finished (Duration: 0:00:12.828553) ===
