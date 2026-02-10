@@ -113,7 +113,7 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
                 >
                     {/* Header */}
                     <div className="flex items-start gap-3 mb-3">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 overflow-hidden flex-shrink-0 ring-2 ring-primary/30">
+                        <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary/20 to-primary/5 overflow-hidden shrink-0 ring-2 ring-primary/30">
                             {player.headshot_url ? (
                                 <img src={player.headshot_url} alt={player.name} className="w-full h-full object-cover" />
                             ) : (
@@ -148,7 +148,7 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
                     </div>
 
                     {/* Season Highs */}
-                    <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-2 mb-3">
+                    <div className="bg-linear-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-2 mb-3">
                         <div className="flex items-center gap-1 text-[10px] text-yellow-400 mb-1">
                             <Award size={10} />
                             <span className="uppercase font-bold">Season Highs</span>
@@ -201,11 +201,11 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
 
                 {/* BACK OF CARD - PROPS */}
                 <div
-                    className="absolute inset-0 bg-gradient-to-br from-slate-900 to-card border border-primary/40 rounded-2xl flex flex-col overflow-hidden"
+                    className="absolute inset-0 bg-linear-to-br from-slate-900 to-card border border-primary/40 rounded-2xl flex flex-col overflow-hidden"
                     style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                 >
                     {/* Header - Fixed */}
-                    <div className="flex items-center justify-between p-3 border-b border-white/10 flex-shrink-0">
+                    <div className="flex items-center justify-between p-3 border-b border-white/10 shrink-0">
                         <div className="flex items-center gap-2">
                             <DollarSign size={14} className="text-primary" />
                             <span className="font-bold text-primary text-xs uppercase tracking-wider">Player Props</span>
@@ -272,7 +272,7 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
                     </div>
 
                     {/* Footer - Fixed */}
-                    <div className="p-2 border-t border-white/10 text-center flex-shrink-0">
+                    <div className="p-2 border-t border-white/10 text-center shrink-0">
                         <div className="inline-flex items-center gap-1 text-[10px] text-muted/50">
                             <RotateCw size={10} />
                             <span>Tap to flip back</span>

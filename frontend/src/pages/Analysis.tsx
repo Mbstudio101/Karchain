@@ -119,7 +119,7 @@ export const Analysis: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-gradient-to-br from-emerald-500/10 to-emerald-900/10 border border-emerald-500/20 rounded-xl p-4"
+                    className="bg-linear-to-br from-emerald-500/10 to-emerald-900/10 border border-emerald-500/20 rounded-xl p-4"
                 >
                     <div className="flex items-center gap-2 text-emerald-400 text-xs mb-2">
                         <DollarSign size={14} />

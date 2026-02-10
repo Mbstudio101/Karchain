@@ -55,7 +55,7 @@ export const MixedParlay: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl">
+                    <div className="p-3 bg-linear-to-br from-purple-500/20 to-indigo-500/20 rounded-xl">
                         <Layers className="text-purple-400" size={28} />
                     </div>
                     <div>
@@ -111,7 +111,7 @@ export const MixedParlay: React.FC = () => {
                         <button
                             onClick={handleGenerate}
                             disabled={generateMutation.isPending}
-                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold py-3 px-6 rounded-xl hover:from-purple-400 hover:to-indigo-400 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                            className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-purple-500 to-indigo-500 text-white font-bold py-3 px-6 rounded-xl hover:from-purple-400 hover:to-indigo-400 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
                         >
                             {generateMutation.isPending ? (
                                 <RefreshCw className="animate-spin" size={18} />
@@ -191,7 +191,7 @@ export const MixedParlay: React.FC = () => {
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-gradient-to-br from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl p-6"
+                            className="bg-linear-to-br from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl p-6"
                         >
                             <div className="flex items-center gap-2 mb-4">
                                 <Trophy className="text-yellow-400" size={20} />

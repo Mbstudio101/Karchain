@@ -59,7 +59,7 @@ class EnhancedParlayGenerator:
         total_clutch_games = 0
         
         for stat in stats:
-            # Basic hit calculation
+            # Basic hit calculation for ALL prop types
             if prop_type == 'points':
                 value = stat.points or 0
             elif prop_type == 'rebounds':
@@ -68,8 +68,39 @@ class EnhancedParlayGenerator:
                 value = stat.assists or 0
             elif prop_type == 'pts+reb+ast':
                 value = (stat.points or 0) + (stat.rebounds or 0) + (stat.assists or 0)
+            elif prop_type == 'steals':
+                value = stat.steals or 0
+            elif prop_type == 'blocks':
+                value = stat.blocks or 0
+            elif prop_type == 'turnovers':
+                value = stat.turnovers or 0
+            elif prop_type == '3-pointers' or prop_type == 'threes':
+                value = stat.three_pointers or 0
+            elif prop_type == 'double-double' or prop_type == 'double_double':
+                # Double-double: need 10+ in at least 2 categories
+                categories = 0
+                if (stat.points or 0) >= 10: categories += 1
+                if (stat.rebounds or 0) >= 10: categories += 1
+                if (stat.assists or 0) >= 10: categories += 1
+                if (stat.steals or 0) >= 10: categories += 1
+                if (stat.blocks or 0) >= 10: categories += 1
+                value = 1 if categories >= 2 else 0
+            elif prop_type == 'triple-double' or prop_type == 'triple_double':
+                # Triple-double: need 10+ in at least 3 categories
+                categories = 0
+                if (stat.points or 0) >= 10: categories += 1
+                if (stat.rebounds or 0) >= 10: categories += 1
+                if (stat.assists or 0) >= 10: categories += 1
+                if (stat.steals or 0) >= 10: categories += 1
+                if (stat.blocks or 0) >= 10: categories += 1
+                value = 1 if categories >= 3 else 0
+            elif prop_type == 'first basket' or prop_type == 'first_basket':
+                # First basket is binary - we don't have this data in stats, so use a proxy
+                # Higher scorers are more likely to score first
+                value = 1 if (stat.points or 0) > 15 else 0
             else:
-                value = 0
+                # For any other prop types, use points as a proxy
+                value = stat.points or 0
             
             if value > line:
                 hits += 1
@@ -94,9 +125,13 @@ class EnhancedParlayGenerator:
         
         # Apply defensive impact adjustment
         defensive_impact = features['defensive_impact']
-        if prop_type in ['points', 'pts+reb+ast']:
+        if prop_type in ['points', 'pts+reb+ast', 'assists', 'rebounds']:
             # Better defense = lower hit rate for offensive props
             defensive_adjustment = (0.45 - defensive_impact) * 0.2
+            adjusted_hit_rate += defensive_adjustment
+        elif prop_type in ['steals', 'blocks']:
+            # Better defense = higher hit rate for defensive props
+            defensive_adjustment = (defensive_impact - 0.45) * 0.15
             adjusted_hit_rate += defensive_adjustment
         
         # Apply athletic composite adjustment
@@ -137,7 +172,7 @@ class EnhancedParlayGenerator:
         return enhanced_edge
     
     def get_enhanced_prop_bets(self, db, limit: int = 15) -> List[Dict]:
-        """Get player props with enhanced analysis using reconstructed data."""
+        """Get player props with enhanced analysis using reconstructed data AND BettingPros intelligence."""
         enhanced_bets = []
         
         # Get all available props
@@ -170,11 +205,48 @@ class EnhancedParlayGenerator:
                 player, prop.prop_type, prop.line, game_context
             )
             
-            # Calculate enhanced edges
+            # INTEGRATE BETTINGPROS INTELLIGENCE DATA
+            bp_multiplier = 1.0
+            bp_reasoning = []
+            
+            # Use BettingPros star rating to adjust hit rate
+            if prop.star_rating is not None:
+                # 5-star = 1.15x multiplier, 1-star = 0.85x multiplier
+                star_multiplier = 0.85 + (prop.star_rating * 0.075)
+                bp_multiplier *= star_multiplier
+                bp_reasoning.append(f"BP {prop.star_rating:.1f}⭐ rating")
+            
+            # Use BettingPros EV to adjust edges
+            if prop.bp_ev is not None and abs(prop.bp_ev) > 0.1:
+                # Significant EV from BettingPros
+                if prop.bp_ev > 0.3:  # High positive EV
+                    bp_multiplier *= 1.2
+                    bp_reasoning.append(f"High BP EV: {prop.bp_ev:.1%}")
+                elif prop.bp_ev < -0.3:  # High negative EV
+                    bp_multiplier *= 0.8
+                    bp_reasoning.append(f"Low BP EV: {prop.bp_ev:.1%}")
+            
+            # Use BettingPros performance percentage if available
+            if prop.performance_pct is not None:
+                bp_performance = prop.performance_pct
+                if abs(bp_performance - hit_rate) > 0.15:  # Significant difference
+                    # Weight the BP performance more heavily
+                    hit_rate = (hit_rate * 0.6) + (bp_performance * 0.4)
+                    bp_reasoning.append(f"BP performance: {bp_performance:.1%}")
+            
+            # Use BettingPros recommended side
+            if prop.recommended_side is not None:
+                bp_reasoning.append(f"BP recommends {prop.recommended_side}")
+            
+            # Apply BettingPros multiplier to hit rate
+            hit_rate *= bp_multiplier
+            hit_rate = max(0.1, min(0.9, hit_rate))  # Keep within bounds
+            
+            # Calculate enhanced edges with BP intelligence
             over_edge = self.calculate_enhanced_edge(prop.over_odds, hit_rate, features)
             under_edge = self.calculate_enhanced_edge(prop.under_odds, 1 - hit_rate, features)
             
-            # Enhanced reasoning with reconstructed data
+            # Enhanced reasoning with reconstructed data AND BettingPros intelligence
             reasoning_parts = []
             
             if features['clutch_performance'] > 0.6:
@@ -187,6 +259,10 @@ class EnhancedParlayGenerator:
             
             if features['defensive_impact'] < 0.4:
                 reasoning_parts.append("Elite defensive impact")
+            
+            # Add BettingPros intelligence to reasoning
+            if bp_reasoning:
+                reasoning_parts.extend(bp_reasoning)
             
             reasoning = f"{player.name} hits {prop.prop_type} in {hit_rate*100:.0f}% of games"
             if reasoning_parts:
@@ -210,6 +286,11 @@ class EnhancedParlayGenerator:
             
             # Add under bet if edge is significant
             if under_edge > 0.04:
+                # Create under reasoning with BettingPros intelligence
+                under_reasoning = f"{player.name} stays under {prop.line} {(1-hit_rate)*100:.0f}% of games"
+                if bp_reasoning:
+                    under_reasoning += f" • {' • '.join(bp_reasoning)}"
+                
                 enhanced_bets.append({
                     'type': 'prop',
                     'player': player.name,
@@ -220,7 +301,7 @@ class EnhancedParlayGenerator:
                     'hit_rate': 1 - hit_rate,
                     'edge': under_edge,
                     'features': features,
-                    'reasoning': f"{player.name} stays under {prop.line} {(1-hit_rate)*100:.0f}% of games",
+                    'reasoning': under_reasoning,
                     'confidence_score': (1 - hit_rate) + (under_edge * 0.5)
                 })
         
@@ -339,21 +420,63 @@ class EnhancedParlayGenerator:
             filtered_props = [bet for bet in prop_bets if bet['edge'] >= min_edge]
             filtered_games = [bet for bet in game_bets if bet['edge'] >= min_edge]
             
-            # Add top prop bets
-            for bet in filtered_props[:num_props]:
-                selected.append(bet)
+            # Shuffle the filtered lists to ensure variety while maintaining quality
+            # We still prioritize higher edge/confidence, but with some randomness
             
-            # Add top game bets
-            for bet in filtered_games[:num_games]:
-                selected.append(bet)
+            # Helper to select random bets with weight on quality
+            def select_weighted_random(candidates, count):
+                if not candidates:
+                    return []
+                if len(candidates) <= count:
+                    return candidates
+                
+                # Sort by confidence/edge
+                candidates.sort(key=lambda x: x.get('confidence_score', x.get('confidence', 0)), reverse=True)
+                
+                # Take top 30% as guaranteed candidates pool
+                top_tier_count = max(1, int(len(candidates) * 0.3))
+                top_tier = candidates[:top_tier_count]
+                remaining_tier = candidates[top_tier_count:]
+                
+                selected = []
+                # 70% of picks come from top tier
+                top_picks_count = min(len(top_tier), int(count * 0.7))
+                if top_picks_count > 0:
+                    selected.extend(random.sample(top_tier, top_picks_count))
+                
+                # Fill remaining from the rest
+                remaining_slots = count - len(selected)
+                if remaining_slots > 0 and remaining_tier:
+                    # Filter remaining tier to ensure we don't pick duplicates (though unlikely with this logic)
+                    available_remaining = [x for x in remaining_tier if x not in selected]
+                    if available_remaining:
+                        selected.extend(random.sample(available_remaining, min(len(available_remaining), remaining_slots)))
+                
+                # If we still need more (because top tier was small), take from any remaining
+                remaining_slots = count - len(selected)
+                if remaining_slots > 0:
+                    pool = [x for x in candidates if x not in selected]
+                    if pool:
+                        selected.extend(random.sample(pool, min(len(pool), remaining_slots)))
+                        
+                return selected
+
+            # Select props and games using weighted randomness
+            selected_props = select_weighted_random(filtered_props, num_props)
+            selected_games = select_weighted_random(filtered_games, num_games)
+            
+            selected = selected_props + selected_games
             
             # Fill remaining slots if needed
             remaining = legs - len(selected)
-            all_bets = filtered_props + filtered_games
-            for bet in all_bets:
-                if bet not in selected and remaining > 0:
-                    selected.append(bet)
-                    remaining -= 1
+            if remaining > 0:
+                # Create a pool of all unused bets
+                unused_props = [p for p in filtered_props if p not in selected]
+                unused_games = [g for g in filtered_games if g not in selected]
+                pool = unused_props + unused_games
+                
+                if pool:
+                    selected.extend(random.sample(pool, min(len(pool), remaining)))
             
             # Calculate combined odds and metrics
             combined_decimal = 1.0

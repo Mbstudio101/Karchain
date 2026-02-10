@@ -610,8 +610,8 @@ def generate_parlay(legs: int = 3, db: Session = Depends(get_db)):
     """Generate an AI-powered parlay for today's games with correlation awareness."""
     from ..analytics.advanced_stats import detect_correlation, calculate_parlay_correlation_penalty
 
-    today = get_current_gameday()
-    start_of_day, end_of_day = get_gameday_range(today)
+    target_date = date if date is not None else get_current_gameday()
+    start_of_day, end_of_day = get_gameday_range(target_date)
 
     top_recs = db.query(models.Recommendation).join(
         models.Game, models.Recommendation.game_id == models.Game.id
@@ -723,7 +723,7 @@ def generate_parlay(legs: int = 3, db: Session = Depends(get_db)):
 
 
 @router.post("/generate-mixed-parlay", response_model=schemas.ParlayBase)
-def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", db: Session = Depends(get_db)):
+def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int = None, db: Session = Depends(get_db)):
     """
     Generate an AI-powered parlay mixing player props with game bets.
     Enhanced with reconstructed NBA data: clutch performance, tracking metrics,
@@ -732,13 +732,21 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", db: Sessi
     Args:
         legs: Number of parlay legs (default: 5)
         risk_level: Risk level - 'conservative', 'balanced', or 'aggressive' (default: 'balanced')
+        seed: Random seed for deterministic results (optional, for testing)
     """
-    today = get_current_gameday()
-    start_of_day, end_of_day = get_gameday_range(today)
+    target_date = date if date is not None else get_current_gameday()
+    start_of_day, end_of_day = get_gameday_range(target_date)
 
     try:
         # Use enhanced parlay generator with reconstructed NBA data
         from ..analytics.enhanced_parlay_generator import EnhancedParlayGenerator
+        import random
+
+        # Set random seed if provided (for testing) or use current time for variety
+        if seed is not None:
+            random.seed(seed)
+        else:
+            random.seed()  # Use current time
 
         generator = EnhancedParlayGenerator()
         result = generator.generate_ai_parlay(legs=legs, risk_level=risk_level)
@@ -803,8 +811,8 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", db: Sessi
             StreakStatus, BetConfidence
         )
 
-    today = get_current_gameday()
-    start_of_day, end_of_day = get_gameday_range(today)
+    target_date = date if date is not None else get_current_gameday()
+    start_of_day, end_of_day = get_gameday_range(target_date)
 
     league_avg_defense = _get_league_avg_defense(db)
     league_avg_pace = _get_league_avg_pace(db)
@@ -839,6 +847,7 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", db: Sessi
             historical_stats=values,
             odds_over=prop.over_odds or -110,
             odds_under=prop.under_odds or -110,
+            game=prop.game,  # Pass game object for ML model
             **analysis_kwargs
         )
 
@@ -1022,7 +1031,7 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", db: Sessi
 
 
 @router.get("/advanced-props")
-def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = Depends(get_db)):
+def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, date: Optional[date] = None, over_under: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Get player props with advanced analytics.
     Now with: opponent defense (1a), pace (1a), BettingPros (1b),
@@ -1035,8 +1044,8 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
         StreakStatus, BetConfidence
     )
 
-    today = get_current_gameday()
-    start_of_day, end_of_day = get_gameday_range(today)
+    target_date = date if date is not None else get_current_gameday()
+    start_of_day, end_of_day = get_gameday_range(target_date)
 
     league_avg_defense = _get_league_avg_defense(db)
     league_avg_pace = _get_league_avg_pace(db)
@@ -1044,6 +1053,9 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
     # Filter props by today's date
     props = db.query(models.PlayerProps).join(
         models.Game, models.PlayerProps.game_id == models.Game.id
+    ).options(
+        joinedload(models.PlayerProps.game).joinedload(models.Game.home_team),
+        joinedload(models.PlayerProps.game).joinedload(models.Game.away_team)
     ).filter(
         models.Game.game_date >= start_of_day,
         models.Game.game_date <= end_of_day
@@ -1052,7 +1064,7 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
     analyzed_props = []
 
     for prop in props:
-        player = db.query(models.Player).filter(models.Player.id == prop.player_id).first()
+        player = db.query(models.Player).options(joinedload(models.Player.team)).filter(models.Player.id == prop.player_id).first()
         if not player or not player.stats:
             continue
 
@@ -1088,6 +1100,7 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
             historical_stats=values,
             odds_over=prop.over_odds or -110,
             odds_under=prop.under_odds or -110,
+            game=prop.game,  # Pass game object for ML model
             **analysis_kwargs
         )
 
@@ -1098,20 +1111,38 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
             if injury_mod < 0.9 and analysis.confidence == BetConfidence.HIGH:
                 analysis.confidence = BetConfidence.MEDIUM
 
-        # Filter by minimum EV and Kelly
-        if analysis.ev < min_ev or analysis.kelly_fraction < min_kelly:
+        # Filter by minimum EV and Kelly (only if explicitly requested)
+        if min_ev > 0 and analysis.ev < min_ev:
             continue
+        if min_kelly > 0 and analysis.kelly_fraction < min_kelly:
+            continue
+
+        # Filter by Over/Under recommendation
+        if over_under and over_under.lower() in ['over', 'under']:
+            if analysis.recommendation.lower() != over_under.lower():
+                continue
 
         # BP agreement flag
         bp_agrees = True
         if prop.recommended_side and analysis.recommendation not in ("avoid", "insufficient_data"):
             bp_agrees = prop.recommended_side.lower() == analysis.recommendation
 
+        # Determine opponent
+        opponent = "UNK"
+        if prop.game:
+            if player.team_id == prop.game.home_team_id:
+                opponent = prop.game.away_team.name if prop.game.away_team else "UNK"
+            else:
+                opponent = prop.game.home_team.name if prop.game.home_team else "UNK"
+
         analyzed_props.append({
             "prop_id": prop.id,
             "player_id": player.id,
             "player_name": player.name,
             "player_position": player.position,
+            "team_name": player.team.name if player.team else None,
+            "team_logo": player.team.logo_url if player.team else None,
+            "opponent": opponent,
             "prop_type": prop.prop_type,
             "line": prop.line,
             "over_odds": prop.over_odds,
@@ -1145,7 +1176,7 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
 
     return {
         "total": len(analyzed_props),
-        "props": analyzed_props[:100]
+        "props": analyzed_props[:500]
     }
 
 
@@ -1229,6 +1260,7 @@ def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db))
             historical_stats=values,
             odds_over=prop.over_odds or -110,
             odds_under=prop.under_odds or -110,
+            game=prop.game,  # Pass game object for ML model
             **analysis_kwargs
         )
 

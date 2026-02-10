@@ -1,13 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchGeniusPicks } from "../api";
-import { Brain, Flame, Snowflake, RefreshCw, Award } from "lucide-react";
+import { Brain, Flame, Snowflake, RefreshCw, Award, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const GeniusPicksPage: React.FC = () => {
+    const [selectedDate, setSelectedDate] = useState(() => {
+        // Default to current date in YYYY-MM-DD format
+        return new Date().toISOString().split('T')[0];
+    });
+
     const { data, isLoading, refetch, isFetching } = useQuery({
-        queryKey: ["geniusPicks"],
-        queryFn: fetchGeniusPicks,
+        queryKey: ["geniusPicks", selectedDate],
+        queryFn: () => fetchGeniusPicks(selectedDate),
         staleTime: 1000 * 60 * 5
     });
 
@@ -34,7 +39,7 @@ export const GeniusPicksPage: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl">
+                    <div className="p-3 bg-linear-to-br from-purple-500/20 to-pink-500/20 rounded-xl">
                         <Brain className="text-purple-400" size={28} />
                     </div>
                     <div>
@@ -42,14 +47,49 @@ export const GeniusPicksPage: React.FC = () => {
                         <p className="text-sm text-muted">A/A+ Grade • Kelly Optimized • Positive EV Only</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => refetch()}
-                    disabled={isFetching}
-                    className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl transition-colors"
-                >
-                    <RefreshCw size={16} className={isFetching ? "animate-spin" : ""} />
-                    <span className="text-sm">Refresh</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* Date Navigation */}
+                    <button
+                        onClick={() => {
+                            const prevDate = new Date(selectedDate);
+                            prevDate.setDate(prevDate.getDate() - 1);
+                            setSelectedDate(prevDate.toISOString().split('T')[0]);
+                        }}
+                        className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+                        title="Previous Day"
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg">
+                        <Calendar size={16} className="text-muted" />
+                        <span className="text-sm font-medium">
+                            {new Date(selectedDate).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                            })}
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => {
+                            const nextDate = new Date(selectedDate);
+                            nextDate.setDate(nextDate.getDate() + 1);
+                            setSelectedDate(nextDate.toISOString().split('T')[0]);
+                        }}
+                        className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+                        title="Next Day"
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                    <button
+                        onClick={() => refetch()}
+                        disabled={isFetching}
+                        className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl transition-colors"
+                    >
+                        <RefreshCw size={16} className={isFetching ? "animate-spin" : ""} />
+                        <span className="text-sm">Refresh</span>
+                    </button>
+                </div>
             </div>
 
             {/* Stats Bar */}
@@ -59,20 +99,20 @@ export const GeniusPicksPage: React.FC = () => {
                     <div className="text-3xl font-bold text-white">{data?.genius_count || 0}</div>
                 </div>
                 {sCount > 0 && (
-                    <div className="bg-gradient-to-br from-amber-500/10 to-red-500/10 border border-amber-500/20 rounded-xl p-4">
+                    <div className="bg-linear-to-br from-amber-500/10 to-red-500/10 border border-amber-500/20 rounded-xl p-4">
                         <div className="text-xs text-amber-400 uppercase tracking-wider mb-1">S Grade</div>
                         <div className="text-3xl font-bold text-amber-400">{sCount}</div>
                     </div>
                 )}
-                <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl p-4">
+                <div className="bg-linear-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl p-4">
                     <div className="text-xs text-yellow-400 uppercase tracking-wider mb-1">A+ Grade</div>
                     <div className="text-3xl font-bold text-yellow-400">{aPlusCount}</div>
                 </div>
-                <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl p-4">
+                <div className="bg-linear-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl p-4">
                     <div className="text-xs text-emerald-400 uppercase tracking-wider mb-1">A Grade</div>
                     <div className="text-3xl font-bold text-emerald-400">{aCount}</div>
                 </div>
-                <div className="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-xl p-4">
+                <div className="bg-linear-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-xl p-4">
                     <div className="text-xs text-purple-400 uppercase tracking-wider mb-1">Avg Edge</div>
                     <div className="text-3xl font-bold text-purple-400">
                         {data?.picks.length
@@ -108,7 +148,7 @@ export const GeniusPicksPage: React.FC = () => {
                                 {/* Header */}
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-center gap-2">
-                                        <div className={`text-xs font-black px-2.5 py-1 rounded-full bg-gradient-to-r ${getGradeColor(pick.grade)} text-black`}>
+                                        <div className={`text-xs font-black px-2.5 py-1 rounded-full bg-linear-to-r ${getGradeColor(pick.grade)} text-black`}>
                                             {pick.grade}
                                         </div>
                                         {getStreakIcon(pick.streak)}

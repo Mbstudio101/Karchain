@@ -166,6 +166,42 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                     <OddsPill value={odds.spread_points !== null ? -odds.spread_points : null} price={odds.home_spread_price} type="spread" />
                     <OddsPill label="Under" value={odds.total_points} price={odds.under_price} type="total" />
                     <OddsPill value={odds.home_moneyline} price={null} type="money" />
+
+                    {/* Additional Game Props */}
+                    {odds.additional_props && (
+                        <>
+                            {/* First Half Odds */}
+                            {odds.additional_props.first_half_home_moneyline !== undefined && (
+                                <>
+                                    <div className="col-span-3 grid grid-cols-3 gap-2 mb-1 px-1 mt-3">
+                                        <div className="text-[9px] text-center text-muted/60 uppercase tracking-widest font-black">1H Spread</div>
+                                        <div className="text-[9px] text-center text-muted/60 uppercase tracking-widest font-black">1H Total</div>
+                                        <div className="text-[9px] text-center text-muted/60 uppercase tracking-widest font-black">1H Money</div>
+                                    </div>
+                                    <OddsPill value={odds.additional_props.first_half_spread_points} price={odds.additional_props.first_half_away_spread_price} type="spread" />
+                                    <OddsPill label="Over" value={odds.additional_props.first_half_total_points} price={odds.additional_props.first_half_over_price} type="total" />
+                                    <OddsPill value={odds.additional_props.first_half_away_moneyline} price={null} type="money" />
+                                    <OddsPill value={odds.additional_props.first_half_spread_points !== null ? -odds.additional_props.first_half_spread_points : null} price={odds.additional_props.first_half_home_spread_price} type="spread" />
+                                    <OddsPill label="Under" value={odds.additional_props.first_half_total_points} price={odds.additional_props.first_half_under_price} type="total" />
+                                    <OddsPill value={odds.additional_props.first_half_home_moneyline} price={null} type="money" />
+                                </>
+                            )}
+
+                            {/* Odd/Even */}
+                            {odds.additional_props.total_points_odd_even !== undefined && (
+                                <>
+                                    <div className="col-span-3 grid grid-cols-2 gap-2 mb-1 px-1 mt-3">
+                                        <div className="text-[9px] text-center text-muted/60 uppercase tracking-widest font-black">Total Odd</div>
+                                        <div className="text-[9px] text-center text-muted/60 uppercase tracking-widest font-black">Total Even</div>
+                                    </div>
+                                    <div className="col-span-2 grid grid-cols-2 gap-2">
+                                        <OddsPill value="Odd" price={odds.additional_props.total_points_odd_price} type="total" />
+                                        <OddsPill value="Even" price={odds.additional_props.total_points_even_price} type="total" />
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    )}
                 </div>
             ) : (
                 <div className="h-28 flex items-center justify-center text-xs text-muted border border-dashed border-white/10 rounded-xl bg-white/5 font-medium">

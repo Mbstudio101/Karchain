@@ -87,6 +87,8 @@ class PlayerStats(Base):
     assists = Column(Float, default=0)
     steals = Column(Float, default=0)
     blocks = Column(Float, default=0)
+    turnovers = Column(Float, default=0)
+    three_pointers = Column(Float, default=0)
     minutes_played = Column(Float, default=0)
     fg_percentage = Column(Float, nullable=True)
     three_pt_percentage = Column(Float, nullable=True)
@@ -111,10 +113,12 @@ class PlayerProps(Base):
     bp_ev = Column(Float, nullable=True)  # BettingPros calculated expected value
     performance_pct = Column(Float, nullable=True)  # Hit rate over last 15 games
     recommended_side = Column(String, nullable=True)  # 'over' or 'under'
+    sportsbook = Column(String, nullable=True)  # 'FanDuel', 'DraftKings', 'Consensus', etc.
     
     timestamp = Column(DateTime, default=datetime.utcnow)
     
     player = relationship("Player", back_populates="props")
+    game = relationship("Game")
 
 
 class Injury(Base):
@@ -148,6 +152,9 @@ class BettingOdds(Base):
     total_points = Column(Float, nullable=True)
     over_price = Column(Integer, nullable=True)
     under_price = Column(Integer, nullable=True)
+    
+    # Flexible storage for additional game props (Team Totals, Quarter Lines, etc.)
+    additional_props = Column(JSON, nullable=True)
     
     timestamp = Column(DateTime, default=datetime.utcnow)
 

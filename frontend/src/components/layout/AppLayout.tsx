@@ -63,12 +63,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     return (
         <div className="flex h-screen w-full bg-background overflow-hidden font-sans text-foreground selection:bg-primary/30">
             {/* Sidebar */}
-            <div className="w-64 flex-shrink-0 border-r border-white/5 bg-card/50 backdrop-blur-xl flex flex-col p-6 z-20">
+            <div className="w-64 shrink-0 border-r border-white/5 bg-card/50 backdrop-blur-xl flex flex-col p-6 z-20">
                 <div className="flex items-center gap-2 mb-10 px-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20">
+                    <div className="w-8 h-8 rounded-lg bg-linear-to-br from-primary to-emerald-600 flex items-center justify-center shadow-lg shadow-primary/20">
                         <Target className="text-black" size={18} />
                     </div>
-                    <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
+                    <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-white to-white/60">
                         Karchain
                     </span>
                 </div>
@@ -104,8 +104,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 h-full overflow-y-auto relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-background to-background">
-                <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-20 pointer-events-none" />
+            <main className="flex-1 h-full overflow-y-auto relative bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-slate-900 via-background to-background">
+                <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center mask-[linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-20 pointer-events-none" />
                 <div className="p-8 max-w-7xl mx-auto relative z-10 min-h-full">
                     {children || <Outlet />}
                 </div>

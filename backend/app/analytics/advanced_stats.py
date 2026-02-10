@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from enum import Enum
 import math
 
+from app.analytics.ml_models import NBAXGBoostModel
+from app.database import SessionLocal
+
 class StreakStatus(Enum):
     HOT = "hot"
     COLD = "cold"
@@ -385,46 +388,73 @@ def composite_confidence_score(
     bp_star_rating: Optional[float] = None,
     bp_ev: Optional[float] = None,
     bp_recommended_side: Optional[str] = None,
-    our_recommendation: Optional[str] = None
+    our_recommendation: Optional[str] = None,
+    ml_confidence: Optional[float] = None  # New parameter for ML model confidence
 ) -> Tuple[float, bool]:
     """
-    Blend our stats with BettingPros intelligence data.
+    Blend our stats with BettingPros intelligence data and ML model.
 
     Weights:
-      - Our statistical hit rate: 40%
-      - BettingPros star_rating/bp_ev: 30%
-      - Recency-weighted hit rate: 30%
+      - Our statistical hit rate: 35%
+      - BettingPros star_rating/bp_ev: 25%
+      - Recency-weighted hit rate: 25%
+      - ML Model Confidence: 15% (if available)
 
     Returns:
         (composite_score 0-1, bp_agrees: bool)
     """
-    # Our stats component (40%)
-    our_component = our_hit_rate * 0.40
+    # Base weights
+    w_stats = 0.40
+    w_bp = 0.30
+    w_recency = 0.30
+    w_ml = 0.0
 
-    # Recency component (30%)
-    recency_component = recency_hit_rate_val * 0.30
+    # Adjust weights if ML confidence is provided
+    if ml_confidence is not None:
+        w_stats = 0.35
+        w_bp = 0.25
+        w_recency = 0.25
+        w_ml = 0.15
 
-    # BettingPros component (30%)
-    if bp_star_rating is not None and bp_ev is not None:
-        # Normalize star rating (1-5) to 0-1 scale
-        bp_confidence = min(1.0, max(0.0, (bp_star_rating - 1) / 4.0))
-        # Blend star rating confidence with EV signal
-        bp_ev_signal = 0.6 if bp_ev > 0 else 0.4
-        bp_score = (bp_confidence * 0.6 + bp_ev_signal * 0.4)
-        bp_component = bp_score * 0.30
-    else:
-        # No BP data: redistribute weight to our stats and recency
-        bp_component = 0.0
-        our_component = our_hit_rate * 0.55
-        recency_component = recency_hit_rate_val * 0.45
+    # Our stats component
+    our_component = our_hit_rate * w_stats
 
-    composite = our_component + recency_component + bp_component
+    # Recency component
+    recency_component = recency_hit_rate_val * w_recency
 
-    # Check if BP agrees with our recommendation
-    bp_agrees = True  # Default to True if no BP data
+    # BettingPros component
+    bp_score = 0.5  # Default neutral
+    bp_agrees = True  # Default assume agreement if no data
+
+    if bp_star_rating is not None:
+        # 1 star = 0.2, 3 stars = 0.6, 5 stars = 1.0
+        bp_score = min(1.0, bp_star_rating / 5.0)
+    
+    # Adjust BP score based on EV if available
+    if bp_ev is not None:
+        # EV > 10% is great (1.0), EV < -10% is bad (0.0)
+        ev_score = min(1.0, max(0.0, 0.5 + (bp_ev / 20.0)))
+        if bp_star_rating is not None:
+            bp_score = (bp_score + ev_score) / 2
+        else:
+            bp_score = ev_score
+
+    # Check agreement
     if bp_recommended_side and our_recommendation:
         bp_agrees = bp_recommended_side.lower() == our_recommendation.lower()
+        # If BP disagrees, penalize the BP score contribution
+        if not bp_agrees:
+            bp_score = 1.0 - bp_score
 
+    bp_component = bp_score * w_bp
+
+    # ML Component
+    ml_component = 0.0
+    if ml_confidence is not None:
+        ml_component = ml_confidence * w_ml
+
+    composite = our_component + recency_component + bp_component + ml_component
+    
     return min(0.95, max(0.05, composite)), bp_agrees
 
 
@@ -447,7 +477,8 @@ def analyze_prop(
     bp_star_rating: Optional[float] = None,
     bp_ev: Optional[float] = None,
     bp_performance_pct: Optional[float] = None,
-    bp_recommended_side: Optional[str] = None
+    bp_recommended_side: Optional[str] = None,
+    game: Optional[object] = None  # Add game object for ML model
 ) -> PropAnalysis:
     """
     Perform complete analysis of a player prop with all available signals.
@@ -533,6 +564,18 @@ def analyze_prop(
         penalty = min(abs(projection_delta) * 0.3, 0.15)
         adjusted_hit_rate = max(0.05, adjusted_hit_rate - penalty)
 
+    # --- ML Model Confidence ---
+    ml_confidence = None
+    if game is not None:
+        try:
+            ml_model = NBAXGBoostModel()
+            ml_confidence = ml_model.predict_one(game, SessionLocal())
+            if ml_confidence is not None:
+                # Normalize to 0-1 range and add slight uncertainty buffer
+                ml_confidence = max(0.1, min(0.9, ml_confidence))
+        except Exception as e:
+            print(f"ML model prediction failed: {e}")
+
     # --- BettingPros Composite Confidence ---
     recency_rate = recency_hit_rate(line, historical_stats)
 
@@ -545,7 +588,8 @@ def analyze_prop(
         bp_star_rating=bp_star_rating,
         bp_ev=bp_ev,
         bp_recommended_side=bp_recommended_side,
-        our_recommendation=prelim_rec
+        our_recommendation=prelim_rec,
+        ml_confidence=ml_confidence  # Pass ML confidence
     )
 
     # Use composite as the final adjusted hit rate

@@ -5,11 +5,21 @@ import requests
 from datetime import datetime
 from typing import List, Dict, Optional
 
+from sqlalchemy import case
 from .base_scraper import BaseScraper
 from app.database import SessionLocal
 from app.models import Team, Game, BettingOdds, Player, PlayerProps
 
 logger = logging.getLogger(__name__)
+
+def decimal_to_american(decimal_odds):
+    """Convert decimal odds to American odds."""
+    if not decimal_odds or decimal_odds <= 1:
+        return -110  # Default to -110 for invalid odds
+    if decimal_odds >= 2:
+        return min(int((decimal_odds - 1) * 100), 300)  # Cap at +300 for realistic props
+    else:
+        return max(int(-100 / (decimal_odds - 1)), -400)  # Cap at -400 for realistic props
 
 class BettingProsScraper(BaseScraper):
     def __init__(self, headless: bool = True):
@@ -23,7 +33,29 @@ class BettingProsScraper(BaseScraper):
         self.game_markets = {
             127: "moneyline",
             128: "total",
-            129: "spread"
+            129: "spread",
+            # Additional Game Props
+            130: "team_total_home",     # Home team total points
+            131: "team_total_away",     # Away team total points
+            132: "first_half_spread",   # First half spread
+            133: "first_half_total",    # First half total
+            134: "first_quarter_spread", # First quarter spread
+            135: "first_quarter_total", # First quarter total
+            247: "first_half_moneyline", # First half moneyline
+            248: "first_quarter_moneyline", # First quarter moneyline
+            # Advanced Game Props
+            350: "win_margin_home",     # Home team win margin
+            351: "win_margin_away",     # Away team win margin
+            352: "race_to_10_home",     # Race to 10 points - home
+            353: "race_to_10_away",     # Race to 10 points - away
+            354: "race_to_20_home",     # Race to 20 points - home
+            355: "race_to_20_away",     # Race to 20 points - away
+            356: "highest_scoring_quarter", # Highest scoring quarter
+            357: "both_teams_score_100",    # Both teams score 100+ points
+            358: "overtime_yes_no",         # Game goes to overtime
+            359: "double_result",           # Double result (HT/FT)
+            363: "total_points_odd_even",   # Total points odd/even
+            364: "team_total_odd_even_home", # Home team total odd/even
         }
         # Player Prop Market IDs (verified via API discovery)
         # Note: Some market IDs may return player props, others return team props
@@ -90,6 +122,147 @@ class BettingProsScraper(BaseScraper):
         except Exception as e:
             logger.error(f"API Request failed for {endpoint}: {e}")
             return None
+
+    async def scrape_player_props_by_name(self, player_name: str):
+        """
+        Scrape player props for a specific player by name.
+        This uses the API to find the player and their props.
+        """
+        logger.info(f"Scraping props for player: {player_name}")
+        
+        # First, try to find the player in the API
+        player_data = self._get_api("players", {"name": player_name, "sport": "NBA"})
+        if not player_data or not player_data.get("players"):
+            logger.warning(f"Player not found: {player_name}")
+            return
+        
+        # Get the first matching player
+        player_info = player_data["players"][0]
+        player_id = player_info.get("id")
+        full_name = f"{player_info.get('first_name', '')} {player_info.get('last_name', '')}".strip()
+        
+        logger.info(f"Found player: {full_name} (ID: {player_id})")
+        
+        # Get props for this player
+        props_data = self._get_api("props", {
+            "player_id": player_id,
+            "sport": "NBA",
+            "limit": 100
+        })
+        
+        if not props_data or not props_data.get("props"):
+            logger.warning(f"No props found for player: {full_name}")
+            return
+        
+        logger.info(f"Found {len(props_data['props'])} props for {full_name}")
+        
+        # Process each prop
+        for prop in props_data["props"]:
+            await self._process_individual_player_prop(prop, full_name)
+
+    async def _process_individual_player_prop(self, prop: Dict, player_name: str):
+        """Process a single player prop from the API."""
+        try:
+            # Extract event info
+            event_id = str(prop.get("event_id"))
+            market_id = prop.get("market_id")
+            
+            # Get event details if not cached
+            if event_id not in self.events_cache:
+                event_data = self._get_api("events", {"id": event_id})
+                if event_data and event_data.get("events"):
+                    event = event_data["events"][0]
+                    home_abbr = event.get("home")
+                    away_abbr = event.get("visitor")
+                    
+                    home_name = self.NBA_TEAMS.get(home_abbr)
+                    away_name = self.NBA_TEAMS.get(away_abbr)
+                    
+                    # Find game in database
+                    db = SessionLocal()
+                    try:
+                        home_team = db.query(Team).filter(Team.name == home_name).first() if home_name else None
+                        away_team = db.query(Team).filter(Team.name == away_name).first() if away_name else None
+                        
+                        if home_team and away_team:
+                            # Look for upcoming games
+                            from datetime import timedelta
+                            today = datetime.utcnow().date()
+                            tomorrow = today + timedelta(days=2)
+                            
+                            game = db.query(Game).filter(
+                                Game.home_team_id == home_team.id,
+                                Game.away_team_id == away_team.id,
+                                Game.game_date >= today,
+                                Game.game_date <= tomorrow
+                            ).first()
+                            
+                            self.events_cache[event_id] = {
+                                "home": home_team.name,
+                                "away": away_team.name,
+                                "game_id": game.id if game else None
+                            }
+                    finally:
+                        db.close()
+                else:
+                    return
+            
+            event_info = self.events_cache[event_id]
+            if not event_info.get("game_id"):
+                return
+            
+            # Map market ID to prop type
+            market_map = {
+                156: "points",
+                157: "assists",
+                159: "rebounds",
+                151: "threes",
+                142: "steals",
+                162: "blocks",
+                160: "turnovers",
+                136: "double_double",
+                152: "first_basket",
+                335: "pts+reb",
+                336: "pts+ast",
+                337: "reb+ast",
+                338: "pts+reb+ast"
+            }
+            
+            prop_type = market_map.get(market_id)
+            if not prop_type:
+                return
+            
+            # Extract odds data
+            over_data = prop.get("over", {})
+            under_data = prop.get("under", {})
+            
+            line = over_data.get("line") or under_data.get("line")
+            over_odds = over_data.get("odds", -110)
+            under_odds = under_data.get("odds", -110)
+            
+            if not line:
+                return
+            
+            # Convert decimal odds to American if needed
+            if isinstance(over_odds, float):
+                over_odds = decimal_to_american(over_odds)
+            if isinstance(under_odds, float):
+                under_odds = decimal_to_american(under_odds)
+            
+            # Get player's team
+            player_team_abbr = prop.get("participant", {}).get("player", {}).get("team")
+            player_team_name = self.NBA_TEAMS.get(player_team_abbr) if player_team_abbr else None
+            
+            # Use player's team if available, otherwise use home team
+            target_team = player_team_name or event_info["home"]
+            
+            # Save the prop
+            self.save_player_prop(player_name, prop_type, line, over_odds, under_odds, target_team, "BettingPros")
+            
+            logger.info(f"Saved {prop_type} prop for {player_name}: {line} (O: {over_odds}, U: {under_odds})")
+            
+        except Exception as e:
+            logger.error(f"Error processing individual player prop: {e}")
 
     async def scrape_nba_data(self):
         """Scrapes all NBA game lines and player props."""
@@ -278,6 +451,10 @@ class BettingProsScraper(BaseScraper):
         odds_data = accumulated[event_id]
         market_name = self.game_markets[market_id]
 
+        # Pre-compute home team name and abbreviation for consistent matching
+        home_team_name = event_info["home"].lower()
+        home_abbr = event_info.get("home_abbr", "").lower()
+
         selections = offer.get("selections", [])
         for sel in selections:
             sel_label = sel.get("label", "").lower()
@@ -293,9 +470,6 @@ class BettingProsScraper(BaseScraper):
 
                 if market_name == "moneyline":
                     # Check if selection label matches home team (partial match)
-                    home_team_name = event_info["home"].lower()
-                    home_abbr = event_info.get("home_abbr", "").lower()
-                    
                     # Partial matching - check if selection is contained in team name or vice versa
                     is_home = (sel_label in home_team_name or home_team_name in sel_label or 
                               sel_label == home_abbr or sel_label == home_team_name)
@@ -306,10 +480,6 @@ class BettingProsScraper(BaseScraper):
                         odds_data["away_moneyline"] = cost
                 elif market_name == "spread":
                     if "over" not in sel_label and "under" not in sel_label:
-                        # Check if selection label matches home team (partial match)
-                        home_team_name = event_info["home"].lower()
-                        home_abbr = event_info.get("home_abbr", "").lower()
-                        
                         # Partial matching - check if selection is contained in team name or vice versa
                         is_home = (sel_label in home_team_name or home_team_name in sel_label or 
                                   sel_label == home_abbr or sel_label == home_team_name)
@@ -328,6 +498,147 @@ class BettingProsScraper(BaseScraper):
                         if "total_points" not in odds_data and val:
                             odds_data["total_points"] = val
                         odds_data["under_price"] = cost
+                
+                # Additional Game Props
+                elif market_name == "team_total_home":
+                    if "over" in sel_label:
+                        odds_data["home_team_total"] = val
+                        odds_data["home_team_total_over"] = cost
+                    elif "under" in sel_label:
+                        if "home_team_total" not in odds_data and val:
+                            odds_data["home_team_total"] = val
+                        odds_data["home_team_total_under"] = cost
+                
+                elif market_name == "team_total_away":
+                    if "over" in sel_label:
+                        odds_data["away_team_total"] = val
+                        odds_data["away_team_total_over"] = cost
+                    elif "under" in sel_label:
+                        if "away_team_total" not in odds_data and val:
+                            odds_data["away_team_total"] = val
+                        odds_data["away_team_total_under"] = cost
+                
+                elif market_name == "first_half_spread":
+                    if "over" not in sel_label and "under" not in sel_label:
+                        is_home = (sel_label in home_team_name or home_team_name in sel_label or 
+                                  sel_label == home_abbr or sel_label == home_team_name)
+                        if is_home:
+                            odds_data["first_half_home_spread"] = val
+                            odds_data["first_half_home_spread_price"] = cost
+                        else:
+                            odds_data["first_half_away_spread"] = val
+                            odds_data["first_half_away_spread_price"] = cost
+                
+                elif market_name == "first_half_total":
+                    if "over" in sel_label:
+                        odds_data["first_half_total"] = val
+                        odds_data["first_half_over"] = cost
+                    elif "under" in sel_label:
+                        if "first_half_total" not in odds_data and val:
+                            odds_data["first_half_total"] = val
+                        odds_data["first_half_under"] = cost
+                
+                elif market_name == "first_quarter_spread":
+                    if "over" not in sel_label and "under" not in sel_label:
+                        is_home = (sel_label in home_team_name or home_team_name in sel_label or 
+                                  sel_label == home_abbr or sel_label == home_team_name)
+                        if is_home:
+                            odds_data["first_quarter_home_spread"] = val
+                            odds_data["first_quarter_home_spread_price"] = cost
+                        else:
+                            odds_data["first_quarter_away_spread"] = val
+                            odds_data["first_quarter_away_spread_price"] = cost
+                
+                elif market_name == "first_quarter_total":
+                    if "over" in sel_label:
+                        odds_data["first_quarter_total"] = val
+                        odds_data["first_quarter_over"] = cost
+                    elif "under" in sel_label:
+                        if "first_quarter_total" not in odds_data and val:
+                            odds_data["first_quarter_total"] = val
+                        odds_data["first_quarter_under"] = cost
+                
+                elif market_name == "first_half_moneyline":
+                    is_home = (sel_label in home_team_name or home_team_name in sel_label or 
+                              sel_label == home_abbr or sel_label == home_team_name)
+                    if is_home:
+                        odds_data["first_half_home_moneyline"] = cost
+                    else:
+                        odds_data["first_half_away_moneyline"] = cost
+                
+                elif market_name == "first_quarter_moneyline":
+                    is_home = (sel_label in home_team_name or home_team_name in sel_label or 
+                              sel_label == home_abbr or sel_label == home_team_name)
+                    if is_home:
+                        odds_data["first_quarter_home_moneyline"] = cost
+                    else:
+                        odds_data["first_quarter_away_moneyline"] = cost
+                
+                # Advanced Game Props
+                elif market_name == "win_margin_home":
+                    odds_data["home_win_margin"] = val
+                    odds_data["home_win_margin_price"] = cost
+                
+                elif market_name == "win_margin_away":
+                    odds_data["away_win_margin"] = val
+                    odds_data["away_win_margin_price"] = cost
+                
+                elif market_name == "race_to_10_home":
+                    odds_data["race_to_10_home"] = cost
+                
+                elif market_name == "race_to_10_away":
+                    odds_data["race_to_10_away"] = cost
+                
+                elif market_name == "race_to_20_home":
+                    odds_data["race_to_20_home"] = cost
+                
+                elif market_name == "race_to_20_away":
+                    odds_data["race_to_20_away"] = cost
+                
+                elif market_name == "highest_scoring_quarter":
+                    if "1st" in sel_label:
+                        odds_data["highest_scoring_quarter_1st"] = cost
+                    elif "2nd" in sel_label:
+                        odds_data["highest_scoring_quarter_2nd"] = cost
+                    elif "3rd" in sel_label:
+                        odds_data["highest_scoring_quarter_3rd"] = cost
+                    elif "4th" in sel_label:
+                        odds_data["highest_scoring_quarter_4th"] = cost
+                
+                elif market_name == "both_teams_score_100":
+                    if "yes" in sel_label:
+                        odds_data["both_teams_score_100_yes"] = cost
+                    elif "no" in sel_label:
+                        odds_data["both_teams_score_100_no"] = cost
+                
+                elif market_name == "overtime_yes_no":
+                    if "yes" in sel_label:
+                        odds_data["overtime_yes"] = cost
+                    elif "no" in sel_label:
+                        odds_data["overtime_no"] = cost
+                
+                elif market_name == "double_result":
+                    # Format: "Home/Home", "Home/Away", "Away/Home", "Away/Away"
+                    if "home/home" in sel_label:
+                        odds_data["double_result_home_home"] = cost
+                    elif "home/away" in sel_label:
+                        odds_data["double_result_home_away"] = cost
+                    elif "away/home" in sel_label:
+                        odds_data["double_result_away_home"] = cost
+                    elif "away/away" in sel_label:
+                        odds_data["double_result_away_away"] = cost
+                
+                elif market_name == "total_points_odd_even":
+                    if "odd" in sel_label:
+                        odds_data["total_points_odd"] = cost
+                    elif "even" in sel_label:
+                        odds_data["total_points_even"] = cost
+                
+                elif market_name == "team_total_odd_even_home":
+                    if "odd" in sel_label:
+                        odds_data["home_team_total_odd"] = cost
+                    elif "even" in sel_label:
+                        odds_data["home_team_total_even"] = cost
 
     def _process_player_offer(self, offer: Dict, market_id: int):
         event_id = offer.get("event_id")
@@ -344,6 +655,12 @@ class BettingProsScraper(BaseScraper):
         prop_type = self.prop_markets[market_id]
         selections = offer.get("selections", [])
         
+        # Extract team information
+        player_team_abbr = player.get("team")
+        player_team_name = None
+        if player_team_abbr:
+            player_team_name = self.NBA_TEAMS.get(player_team_abbr)
+        
         # We need both Over and Under lines
         over_odds = 0
         under_odds = 0
@@ -359,11 +676,39 @@ class BettingProsScraper(BaseScraper):
                 line_data = target_book["lines"][0]
                 line = line_data.get("line")
                 cost = line_data.get("cost")
-                if sel_label == "over": over_odds = cost
-                else: under_odds = cost
+                # Convert decimal odds to American odds
+                american_odds = decimal_to_american(cost)
+                if sel_label == "over": over_odds = american_odds
+                else: under_odds = american_odds
+                
+                # Debug logging for extreme odds
+                if cost > 50:  # Log any decimal odds over 50 as they're clearly wrong for sports betting
+                    logger.warning(f"Suspicious high decimal odds: {cost} (decimal) -> {american_odds} (American) for {full_name} {prop_type} {sel_label}")
+                    # For suspiciously high decimal odds, default to more realistic values
+                    if cost > 100:
+                        american_odds = -110  # Default to -110 for clearly corrupted data
         
         if line > 0:
-            self.save_player_prop(full_name, prop_type, line, over_odds, under_odds, event_info["home"])
+            # Determine sportsbook name from target_book
+            sportsbook_name = "Consensus"  # Default fallback
+            if target_book:
+                book_id = target_book.get("id")
+                if book_id == 10:
+                    sportsbook_name = "FanDuel"
+                elif book_id == 0:
+                    sportsbook_name = "Consensus"
+                elif book_id == 2:
+                    sportsbook_name = "DraftKings"
+                elif book_id == 7:
+                    sportsbook_name = "BetMGM"
+                elif book_id == 20:
+                    sportsbook_name = "Caesars"
+                else:
+                    sportsbook_name = f"Book_{book_id}"
+            
+            # Use player's team if available, otherwise fallback to home team (legacy behavior)
+            target_team = player_team_name if player_team_name else event_info["home"]
+            self.save_player_prop(full_name, prop_type, line, over_odds, under_odds, target_team, sportsbook_name)
 
     def save_odds(self, data: Dict):
         db = SessionLocal()
@@ -390,6 +735,16 @@ class BettingProsScraper(BaseScraper):
             if spread_pts is None and data.get("away_spread") is not None:
                 spread_pts = -data["away_spread"]
 
+            # Separate standard fields from additional props
+            standard_fields = {
+                "home_team", "away_team", "bookmaker", 
+                "home_moneyline", "away_moneyline", 
+                "home_spread", "away_spread", "home_spread_price", "away_spread_price",
+                "total_points", "over_price", "under_price"
+            }
+            
+            additional_props = {k: v for k, v in data.items() if k not in standard_fields}
+
             odds_entry = BettingOdds(
                 game_id=game.id,
                 bookmaker=data.get("bookmaker", "BettingPros"),
@@ -401,6 +756,7 @@ class BettingProsScraper(BaseScraper):
                 total_points=data.get("total_points"),
                 over_price=data.get("over_price"),
                 under_price=data.get("under_price"),
+                additional_props=additional_props,
                 timestamp=datetime.utcnow()
             )
             db.add(odds_entry)
@@ -412,17 +768,27 @@ class BettingProsScraper(BaseScraper):
         finally:
             db.close()
 
-    def save_player_prop(self, player_name: str, prop_type: str, line: float, over_odds: int, under_odds: int, home_team_name: str):
+    def save_player_prop(self, player_name: str, prop_type: str, line: float, over_odds: int, under_odds: int, team_name: str, sportsbook: str = "Consensus"):
         db = SessionLocal()
         try:
             # Look for games from today and tomorrow
             from datetime import timedelta
             today = datetime.utcnow().date()
-            tomorrow = today + timedelta(days=1)
+            tomorrow = today + timedelta(days=2)  # Extend to 2 days ahead
             
-            game = db.query(Game).join(Team, Game.home_team_id == Team.id).filter(
-                Team.name.ilike(f"%{home_team_name}%"),
-                Game.game_date >= today
+            # Find games where the team is playing (home OR away)
+            # Prioritize Scheduled games over Final games, and pick the closest upcoming game
+            game = db.query(Game).join(Team, 
+                ((Game.home_team_id == Team.id) | (Game.away_team_id == Team.id))
+            ).filter(
+                Team.name.ilike(f"%{team_name}%"),
+                Game.game_date >= today,
+                Game.game_date <= tomorrow
+            ).order_by(
+                # Prioritize Scheduled games (not started yet)
+                case((Game.status == "Scheduled", 0), else_=1),
+                # Then pick the closest upcoming game
+                Game.game_date
             ).first()
             if not game: return
 
@@ -447,12 +813,14 @@ class BettingProsScraper(BaseScraper):
                     prop_type=prop_type,
                     line=line,
                     over_odds=over_odds,
-                    under_odds=under_odds
+                    under_odds=under_odds,
+                    sportsbook=sportsbook
                 )
                 db.add(prop)
             else:
                 prop.over_odds = over_odds
                 prop.under_odds = under_odds
+                prop.sportsbook = sportsbook
             
             prop.timestamp = datetime.utcnow()
             db.commit()
@@ -495,6 +863,39 @@ class BettingProsScraper(BaseScraper):
                 if not player_name:
                     continue
                 
+                # Extract team and event info
+                team_abbr = player_info.get("team")
+                event_id = str(prop.get("event_id"))
+                
+                # Find game for this prop
+                game_id = None
+                
+                # Strategy 1: Check events cache if we have it
+                if event_id in self.events_cache:
+                    game_id = self.events_cache[event_id].get("game_id")
+                
+                # Strategy 2: Look up by team and date if no game_id yet
+                if not game_id and team_abbr:
+                    # Map abbreviation to full name if possible
+                    team_name = self.NBA_TEAMS.get(team_abbr)
+                    if team_name:
+                        from datetime import timedelta
+                        today = datetime.utcnow().date()
+                        tomorrow = today + timedelta(days=2)
+                        
+                        # Find game where this team is home or away
+                        game = db.query(Game).join(
+                            Team, 
+                            (Game.home_team_id == Team.id) | (Game.away_team_id == Team.id)
+                        ).filter(
+                            Team.name == team_name,
+                            Game.game_date >= today,
+                            Game.game_date <= tomorrow
+                        ).first()
+                        
+                        if game:
+                            game_id = game.id
+
                 # Extract projection and analyzer data
                 projection = prop.get("projection", {})
                 over_data = prop.get("over", {})
@@ -545,7 +946,6 @@ class BettingProsScraper(BaseScraper):
                     336: "pts+reb",
                     337: "reb+ast",
                     338: "pts+reb+ast",
-                    151: "pts+reb",
                     147: "double_double",
                     160: "triple_double",
                     152: "turnovers",
@@ -574,6 +974,7 @@ class BettingProsScraper(BaseScraper):
                 
                 if existing_prop:
                     # Update with analyzer data
+                    existing_prop.game_id = game_id  # Update game_id if we found it
                     existing_prop.star_rating = star_rating
                     existing_prop.bp_ev = bp_ev
                     existing_prop.performance_pct = perf_pct
@@ -585,6 +986,7 @@ class BettingProsScraper(BaseScraper):
                     # Create new prop with analyzer data
                     new_prop = PlayerProps(
                         player_id=player.id,
+                        game_id=game_id,  # Include game_id if we found it
                         prop_type=prop_type,
                         line=line,
                         over_odds=over_odds or 0,
@@ -608,9 +1010,16 @@ class BettingProsScraper(BaseScraper):
 
 async def main():
     scraper = BettingProsScraper(headless=True)
+    
+    # Scrape specific players as requested
+    logger.info("Scraping specific player props...")
+    await scraper.scrape_player_props_by_name("LeBron James")
+    await scraper.scrape_player_props_by_name("Austin Reaves")
+    await scraper.scrape_player_props_by_name("Luka Doncic")
+    
+    # Also run the regular scraper
     await scraper.scrape_nba_data()
     await scraper.scrape_prop_analyzer()
 
 if __name__ == "__main__":
     asyncio.run(main())
-

@@ -484,7 +484,8 @@ class FanDuelScraper:
             def clean_price(p):
                 if not p: return None
                 try:
-                    return int(p.replace("+", ""))
+                    # Handle both positive and negative American odds
+                    return int(p)
                 except:
                     return None
             

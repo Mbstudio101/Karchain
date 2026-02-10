@@ -47,6 +47,12 @@ export const PropsFinder: React.FC = () => {
     const [minEdge, setMinEdge] = useState(0);
     const [showFilters, setShowFilters] = useState(true);
     const [selectedPicks, setSelectedPicks] = useState<Record<number, 'over' | 'under'>>({});
+    const [selectedDate, setSelectedDate] = useState(() => {
+        // Default to today's date
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    });
+    const [overUnderFilter, setOverUnderFilter] = useState<string>("");
 
     const togglePick = (propId: number, side: 'over' | 'under') => {
         setSelectedPicks(prev => {
@@ -59,8 +65,8 @@ export const PropsFinder: React.FC = () => {
     };
 
     const { data, isLoading } = useQuery({
-        queryKey: ["advancedProps"],
-        queryFn: () => fetchAdvancedProps(0, 0),
+        queryKey: ["advancedProps", selectedDate, overUnderFilter],
+        queryFn: () => fetchAdvancedProps(0, 0, selectedDate, overUnderFilter),
         refetchInterval: 60000,
     });
 
@@ -149,6 +155,11 @@ export const PropsFinder: React.FC = () => {
                     <div className="flex items-center gap-2 text-sm text-muted">
                         <Filter size={14} />
                         <span>Filters</span>
+                        {(overUnderFilter || search || propTypeFilter !== 'all' || minEdge > 0) && (
+                            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                                Active
+                            </span>
+                        )}
                     </div>
                     <button
                         onClick={() => setShowFilters(!showFilters)}
@@ -164,7 +175,7 @@ export const PropsFinder: React.FC = () => {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="grid grid-cols-1 md:grid-cols-4 gap-4"
+                            className="grid grid-cols-1 md:grid-cols-5 gap-4"
                         >
                             <div className="relative">
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -175,6 +186,28 @@ export const PropsFinder: React.FC = () => {
                                     onChange={e => setSearch(e.target.value)}
                                     className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-muted outline-none focus:border-primary"
                                 />
+                            </div>
+
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={e => setSelectedDate(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-primary"
+                                />
+                            </div>
+
+                            <div className="relative">
+                                <select
+                                    value={overUnderFilter}
+                                    onChange={e => setOverUnderFilter(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-primary appearance-none"
+                                >
+                                    <option value="" className="bg-card">All Picks</option>
+                                    <option value="over" className="bg-card">Over Only</option>
+                                    <option value="under" className="bg-card">Under Only</option>
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                             </div>
 
                             <div className="relative">
@@ -231,7 +264,7 @@ export const PropsFinder: React.FC = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredProps.slice(0, 50).map((prop, i) => {
+                    {filteredProps.slice(0, 500).map((prop, i) => {
                         const isValueBet = prop.edge >= 5;
 
                         return (
@@ -244,11 +277,18 @@ export const PropsFinder: React.FC = () => {
                             >
                                 {/* Header */}
                                 <div className="flex items-start gap-3 mb-3">
+                                    {prop.team_logo && (
+                                        <img src={prop.team_logo} alt={prop.team_name} className="w-8 h-8 object-contain" />
+                                    )}
                                     <div className="flex-1 min-w-0">
                                         <div className="font-bold text-white text-sm leading-tight">{prop.player_name}</div>
-                                        <div className="text-[10px] text-muted">{prop.player_position}</div>
+                                        <div className="text-[10px] text-muted flex items-center gap-1">
+                                            {prop.player_position}
+                                            {prop.team_name && <span>• {prop.team_name}</span>}
+                                            {prop.opponent && <span>vs {prop.opponent}</span>}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    <div className="flex items-center gap-1.5 shrink-0">
                                         {streakBadge(prop.streak_status)}
                                         <span className={`text-xs font-bold px-2 py-0.5 rounded border ${gradeColor(prop.grade)}`}>
                                             {prop.grade}
@@ -370,9 +410,9 @@ export const PropsFinder: React.FC = () => {
                 </div>
             )}
 
-            {filteredProps.length > 50 && (
+            {filteredProps.length > 500 && (
                 <div className="text-center text-muted text-sm">
-                    Showing 50 of {filteredProps.length} props. Refine your filters to see more.
+                    Showing 500 of {filteredProps.length} props. Refine your filters to see more.
                 </div>
             )}
 

@@ -109,7 +109,7 @@ class PlayerBase(BaseModel):
 # --- Player Props Schemas ---
 class PlayerPropsBase(BaseModel):
     id: int
-    player_id: int
+    player_id: Optional[int] = None
     game_id: Optional[int] = None
     prop_type: str  # 'points', 'rebounds', 'assists', 'pts+reb+ast'
     line: float

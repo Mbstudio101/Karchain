@@ -16,7 +16,7 @@ export const RecommendationFeed: React.FC = () => {
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-br from-primary/20 to-emerald-900/20 border border-primary/20 rounded-2xl p-6 relative overflow-hidden group"
+                className="bg-linear-to-br from-primary/20 to-emerald-900/20 border border-primary/20 rounded-2xl p-6 relative overflow-hidden group"
             >
                 <div className="relative z-10">
                     <div className="flex items-center gap-2 text-primary mb-2">

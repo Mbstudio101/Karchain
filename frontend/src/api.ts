@@ -1,7 +1,10 @@
 import axios from "axios";
 
-// Base URL for the FastAPI backend
-const API_URL = "http://127.0.0.1:8000";
+// Detect if we're in Tauri desktop environment
+const isDesktop = typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined;
+
+// Base URL for the FastAPI backend - use localhost for desktop
+const API_URL = isDesktop ? "http://localhost:8000" : "http://127.0.0.1:8000";
 
 export const api = axios.create({
     baseURL: API_URL,
@@ -56,6 +59,7 @@ export interface Odds {
     over_price: number | null;
     under_price: number | null;
     timestamp: string;
+    additional_props?: Record<string, any> | null;
 }
 
 export interface TeamStats {
@@ -146,6 +150,9 @@ export interface AdvancedProp {
     player_id: number;
     player_name: string;
     player_position: string | null;
+    team_name?: string;
+    team_logo?: string;
+    opponent?: string;
     prop_type: string;
     line: number;
     over_odds: number;
@@ -174,18 +181,26 @@ export interface AdvancedPropsResponse {
     props: AdvancedProp[];
 }
 
-export const fetchAdvancedProps = async (minEv: number = 0, minKelly: number = 0): Promise<AdvancedPropsResponse> => {
-    const { data } = await api.get(`/recommendations/advanced-props?min_ev=${minEv}&min_kelly=${minKelly}`);
+export const fetchAdvancedProps = async (minEv: number = 0, minKelly: number = 0, date?: string, overUnder?: string): Promise<AdvancedPropsResponse> => {
+    const dateParam = date ? `&date=${date}` : '';
+    const overUnderParam = overUnder ? `&over_under=${overUnder}` : '';
+    const { data } = await api.get(`/recommendations/advanced-props?min_ev=${minEv}&min_kelly=${minKelly}${dateParam}${overUnderParam}`);
     return data;
 };
 
 // Genius Picks
 export interface GeniusPick {
     player: string;
+    player_headshot?: string;
+    team?: {
+        name: string;
+        logo: string;
+    };
     prop: string;
     line: number;
     pick: string;
     odds: number;
+    sportsbook?: string;
     ev: string;
     edge: string;
     kelly_bet: string;
@@ -205,8 +220,9 @@ export interface GeniusPicksResponse {
     picks: GeniusPick[];
 }
 
-export const fetchGeniusPicks = async (): Promise<GeniusPicksResponse> => {
-    const { data } = await api.get<GeniusPicksResponse>("/recommendations/genius-picks");
+export const fetchGeniusPicks = async (date?: string): Promise<GeniusPicksResponse> => {
+    const dateParam = date ? `?date=${date}` : '';
+    const { data } = await api.get<GeniusPicksResponse>(`/recommendations/genius-picks${dateParam}`);
     return data;
 };
 

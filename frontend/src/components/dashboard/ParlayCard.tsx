@@ -25,7 +25,9 @@ export const ParlayCard: React.FC = () => {
     const [selectedLegs, setSelectedLegs] = useState(5);
 
     const fetchMixedParlay = async (legs: number): Promise<Parlay> => {
-        const { data } = await api.post<Parlay>(`/recommendations/generate-mixed-parlay?legs=${legs}`);
+        // Add random seed to bypass caching and force fresh generation
+        const seed = Math.floor(Math.random() * 1000000);
+        const { data } = await api.post<Parlay>(`/recommendations/generate-mixed-parlay?legs=${legs}&seed=${seed}`);
         return data;
     };
 
@@ -33,7 +35,8 @@ export const ParlayCard: React.FC = () => {
         queryKey: ["mixedParlay", selectedLegs],
         queryFn: () => fetchMixedParlay(selectedLegs),
         retry: false,
-        staleTime: 1000 * 60 * 5
+        staleTime: 0, // Force fresh data on each call
+        gcTime: 1000 * 60 * 2 // Keep in cache for 2 minutes max
     });
 
     const regenerateMutation = useMutation({
@@ -72,7 +75,7 @@ export const ParlayCard: React.FC = () => {
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-gradient-to-br from-accent/20 via-purple-900/20 to-blue-900/20 border border-accent/30 rounded-2xl p-5 relative overflow-hidden h-full flex flex-col"
+            className="bg-linear-to-br from-accent/20 via-purple-900/20 to-blue-900/20 border border-accent/30 rounded-2xl p-5 relative overflow-hidden h-full flex flex-col"
         >
             <div className="absolute -right-8 -top-8 bg-accent/20 w-32 h-32 rounded-full blur-3xl" />
             <div className="absolute -left-8 -bottom-8 bg-purple-500/10 w-24 h-24 rounded-full blur-2xl" />
@@ -150,7 +153,7 @@ export const ParlayCard: React.FC = () => {
                             </div>
 
                             {/* Summary Footer */}
-                            <div className="border-t border-white/10 pt-3 flex-shrink-0">
+                            <div className="border-t border-white/10 pt-3 shrink-0">
                                 <div className="flex items-center justify-between mb-2">
                                     <div>
                                         <div className="text-[10px] text-muted mb-0.5">Combined Odds</div>
