@@ -38,8 +38,8 @@ export const GameDetails: React.FC = () => {
     if (isLoading) return <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
     if (!game) return <div className="p-10 text-center">Game not found</div>;
 
-    const homeStats = game.home_team.stats[0] || { ppg: 0, opp_ppg: 0, win_pct: 0 };
-    const awayStats = game.away_team.stats[0] || { ppg: 0, opp_ppg: 0, win_pct: 0 };
+    const homeStats = game.home_team.stats?.[0] || { ppg: 0, opp_ppg: 0, win_pct: 0, wins: 0, losses: 0, plus_minus: 0 };
+    const awayStats = game.away_team.stats?.[0] || { ppg: 0, opp_ppg: 0, win_pct: 0, wins: 0, losses: 0, plus_minus: 0 };
 
     const chartData = [
         { name: "PPG", Home: homeStats.ppg, Away: awayStats.ppg },
@@ -93,8 +93,8 @@ export const GameDetails: React.FC = () => {
                         <h3 className="font-bold text-white">Head-to-Head Stats</h3>
                     </div>
 
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-[300px] w-full min-h-[200px]">
+                        <ResponsiveContainer width="100%" height={300} minHeight={200}>
                             <BarChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
                                 <XAxis dataKey="name" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
@@ -112,7 +112,7 @@ export const GameDetails: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* Betting Trends (Mock) */}
+                {/* Betting Trends - Real Data */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -121,22 +121,45 @@ export const GameDetails: React.FC = () => {
                 >
                     <div className="flex items-center gap-2 mb-6">
                         <TrendingUp size={18} className="text-primary" />
-                        <h3 className="font-bold text-white">Betting Trends</h3>
+                        <h3 className="font-bold text-white">Team Stats & Trends</h3>
                     </div>
 
                     <div className="space-y-4">
                         <div className="p-4 bg-white/5 rounded-xl border-l-2 border-emerald-500">
-                            <div className="text-sm font-bold text-white mb-1">{game.home_team.name} at Home</div>
-                            <div className="text-xs text-muted">7-3 ATS in last 10 games</div>
+                            <div className="text-sm font-bold text-white mb-1">{game.home_team.name}</div>
+                            <div className="text-xs text-muted">
+                                Record: {game.home_team.current_record || `${homeStats.wins ?? 0}-${homeStats.losses ?? 0}`} |
+                                PPG: {homeStats.ppg?.toFixed(1) || 'N/A'} |
+                                Win%: {((homeStats.win_pct ?? 0) * 100).toFixed(0)}%
+                            </div>
                         </div>
                         <div className="p-4 bg-white/5 rounded-xl border-l-2 border-blue-500">
-                            <div className="text-sm font-bold text-white mb-1">{game.away_team.name} on Road</div>
-                            <div className="text-xs text-muted">4-6 ATS in last 10 games</div>
+                            <div className="text-sm font-bold text-white mb-1">{game.away_team.name}</div>
+                            <div className="text-xs text-muted">
+                                Record: {game.away_team.current_record || `${awayStats.wins ?? 0}-${awayStats.losses ?? 0}`} |
+                                PPG: {awayStats.ppg?.toFixed(1) || 'N/A'} |
+                                Win%: {((awayStats.win_pct ?? 0) * 100).toFixed(0)}%
+                            </div>
                         </div>
-                        <div className="p-4 bg-white/5 rounded-xl border-l-2 border-orange-500">
-                            <div className="text-sm font-bold text-white mb-1">Over/Under</div>
-                            <div className="text-xs text-muted">Over is 4-1 in last 5 meetings</div>
-                        </div>
+                        {game.odds && game.odds.length > 0 && (() => {
+                            const latestOdds = game.odds[game.odds.length - 1];
+                            const spread = latestOdds?.spread_points;
+                            const total = latestOdds?.total_points;
+                            const homeMl = latestOdds?.home_moneyline;
+                            const awayMl = latestOdds?.away_moneyline;
+                            return (
+                                <div className="p-4 bg-white/5 rounded-xl border-l-2 border-orange-500">
+                                    <div className="text-sm font-bold text-white mb-1">Line Movement</div>
+                                    <div className="text-xs text-muted">
+                                        Spread: {spread != null ? ((spread > 0 ? '+' : '') + spread) : 'N/A'} |
+                                        Total: {total ?? 'N/A'}
+                                        {homeMl != null && awayMl != null && (
+                                            <> | ML: {homeMl > 0 ? '+' : ''}{homeMl} / {awayMl > 0 ? '+' : ''}{awayMl}</>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </motion.div>
             </div>

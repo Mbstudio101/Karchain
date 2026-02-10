@@ -20,12 +20,27 @@ class FanDuelScraper:
 
     async def start(self):
         self.playwright = await async_playwright().start()
-        # Randomized or more modern User Agent
-        ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        
+        # More diverse user agents
+        user_agents = [
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        ]
+        import random
+        ua = random.choice(user_agents)
         
         self.browser = await self.playwright.chromium.launch(
             headless=self.headless,
-            args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-infobars",
+                "--window-position=0,0",
+                "--ignore-certificate-errors",
+                "--ignore-certificate-errors-spki-list",
+                f"--user-agent={ua}"
+            ]
         )
         
         # Load state if exists
@@ -33,17 +48,24 @@ class FanDuelScraper:
         
         self.context = await self.browser.new_context(
             user_agent=ua,
-            viewport={"width": 1440, "height": 900},
+            viewport={"width": 1440 + random.randint(0, 100), "height": 900 + random.randint(0, 100)},
             ignore_https_errors=True,
             storage_state=storage_state,
             extra_http_headers={
                 "Accept-Language": "en-US,en;q=0.9",
-                "Referer": "https://www.google.com/"
+                "Referer": "https://www.google.com/",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+                "Upgrade-Insecure-Requests": "1"
             }
         )
         
+        # Add stealth scripts to the page
+        await self.context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
         self.page = await self.context.new_page()
-        logger.info("Browser launched.")
+        logger.info(f"Browser launched with UA: {ua}")
 
     async def handle_captcha(self, page):
         """Detect and solve 'Press & Hold' captcha across all frames with randomized interaction."""

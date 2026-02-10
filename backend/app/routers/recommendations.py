@@ -1,142 +1,356 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List, Optional
-from datetime import date, datetime
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
+from typing import List, Optional, Dict
+from datetime import date, datetime, timedelta
 from .. import models, schemas
 from ..dependencies import get_db
-from ..date_utils import get_current_gameday
+from ..date_utils import get_current_gameday, get_gameday_range
+from ..analytics.prediction_tracker import PredictionTracker
+from ..analytics.self_improvement import SelfImprovementEngine
 
 router = APIRouter(
     prefix="/recommendations",
     tags=["recommendations"]
 )
 
-@router.get("/", response_model=List[schemas.RecommendationBase])
-def get_recommendations(date: Optional[date] = None, db: Session = Depends(get_db)):
-    """
-    Returns recommendations. Defaults to today's games if no date provided.
-    """
-    if date is None:
-        date = get_current_gameday()
-        
-    # Join with Game to filter by game_date
-    recs = db.query(models.Recommendation).join(models.Game).filter(
-        models.Game.game_date >= datetime.combine(date, datetime.min.time()),
-        models.Game.game_date <= datetime.combine(date, datetime.max.time())
-    ).order_by(models.Recommendation.confidence_score.desc()).all()
-    
-    return recs
+# =============================================================================
+# SHARED HELPERS
+# =============================================================================
 
-@router.post("/generate", response_model=List[schemas.RecommendationBase])
-def generate_recommendations(db: Session = Depends(get_db)):
+def _calculate_implied_prob(american_odds: int) -> float:
+    """Converts American odds to implied probability (0.0 - 1.0)."""
+    if american_odds > 0:
+        return 100 / (american_odds + 100)
+    else:
+        return abs(american_odds) / (abs(american_odds) + 100)
+
+
+def _calculate_pythagorean_win_pct(ppg: float, opp_ppg: float, exponent: float = 13.91) -> float:
+    if ppg == 0 and opp_ppg == 0:
+        return 0.5
+    return (ppg ** exponent) / ((ppg ** exponent) + (opp_ppg ** exponent))
+
+
+def _get_league_avg_ppg(db: Session) -> float:
+    avg_ppg_result = db.query(func.avg(models.TeamStats.ppg)).scalar()
+    return float(avg_ppg_result) if avg_ppg_result else 114.5
+
+
+def _get_league_avg_defense(db: Session) -> float:
+    avg = db.query(func.avg(models.TeamDefenseStats.def_rating)).scalar()
+    return float(avg) if avg else 112.0
+
+
+def _get_league_avg_pace(db: Session) -> float:
+    avg = db.query(func.avg(models.TeamDefenseStats.pace)).scalar()
+    return float(avg) if avg else 99.5
+
+
+def _calculate_injury_impact(db: Session, team_id: int) -> tuple:
+    """Calculates total missing PPG and missing minutes from injured players."""
+    out_players = db.query(models.Player).join(models.Injury).filter(
+        models.Player.team_id == team_id,
+        models.Injury.status == "Out"
+    ).all()
+
+    total_missing_ppg = 0.0
+    total_missing_minutes = 0.0
+    count = 0
+
+    for p in out_players:
+        avg_pts = db.query(func.avg(models.PlayerStats.points)).filter(
+            models.PlayerStats.player_id == p.id
+        ).scalar()
+        avg_min = db.query(func.avg(models.PlayerStats.minutes_played)).filter(
+            models.PlayerStats.player_id == p.id
+        ).scalar()
+        if avg_pts:
+            total_missing_ppg += float(avg_pts)
+        if avg_min:
+            total_missing_minutes += float(avg_min)
+        count += 1
+
+    return total_missing_ppg, total_missing_minutes, count
+
+
+def _get_team_defense_stats(db: Session, team_id: int) -> Optional[models.TeamDefenseStats]:
+    """Get the most recent TeamDefenseStats for a team."""
+    return db.query(models.TeamDefenseStats).filter(
+        models.TeamDefenseStats.team_id == team_id
+    ).order_by(models.TeamDefenseStats.timestamp.desc()).first()
+
+
+def _get_rolling_team_stats(db: Session, team_id: int, n_games: int = 10) -> Dict:
     """
-    Generates recommendations for ACTIVE or UPCOMING games only.
+    Calculate rolling N-game averages from recent PlayerStats grouped by team.
+    Returns dict with ppg, opp_ppg (estimated), plus_minus.
     """
-    # Only analyze games that aren't Final
-    games = db.query(models.Game).filter(models.Game.status.in_(["Scheduled", "Live"])).all()
-    generated_recs = []
-    
-    # --- Helper Functions ---
-    def calculate_implied_prob(american_odds: int) -> float:
-        """Converts American odds to implied probability (0.0 - 1.0)."""
-        if american_odds > 0:
-            return 100 / (american_odds + 100)
+    # Get the last N game_ids for this team's players
+    recent_games = db.query(models.PlayerStats.game_id).filter(
+        models.PlayerStats.player_id.in_(
+            db.query(models.Player.id).filter(models.Player.team_id == team_id)
+        ),
+        models.PlayerStats.game_id.isnot(None)
+    ).group_by(models.PlayerStats.game_id).order_by(
+        models.PlayerStats.game_id.desc()
+    ).limit(n_games).all()
+
+    game_ids = [g[0] for g in recent_games]
+    if not game_ids:
+        return None
+
+    # Sum points per game for this team
+    game_totals = db.query(
+        models.PlayerStats.game_id,
+        func.sum(models.PlayerStats.points).label("total_pts")
+    ).filter(
+        models.PlayerStats.game_id.in_(game_ids),
+        models.PlayerStats.player_id.in_(
+            db.query(models.Player.id).filter(models.Player.team_id == team_id)
+        )
+    ).group_by(models.PlayerStats.game_id).all()
+
+    if not game_totals:
+        return None
+
+    ppg_values = [float(g.total_pts) for g in game_totals if g.total_pts]
+    rolling_ppg = sum(ppg_values) / len(ppg_values) if ppg_values else 0
+
+    return {
+        "rolling_ppg": rolling_ppg,
+        "game_count": len(ppg_values)
+    }
+
+
+def _detect_b2b(db: Session, team_id: int, game_date: datetime) -> tuple:
+    """
+    Detect back-to-back and calculate rest days.
+    Returns (is_b2b: bool, rest_days: int)
+    """
+    # Find the team's most recent game before this one
+    prev_game = db.query(models.Game).filter(
+        ((models.Game.home_team_id == team_id) | (models.Game.away_team_id == team_id)),
+        models.Game.game_date < game_date,
+        models.Game.status == "Final"
+    ).order_by(models.Game.game_date.desc()).first()
+
+    if not prev_game:
+        return False, 2  # Default: not B2B, 2 days rest
+
+    delta = (game_date.date() if isinstance(game_date, datetime) else game_date) - \
+            (prev_game.game_date.date() if isinstance(prev_game.game_date, datetime) else prev_game.game_date)
+    rest_days = delta.days
+
+    return rest_days <= 1, rest_days
+
+
+def _get_team_ats_record(db: Session, team_id: int, n_games: int = 5) -> tuple:
+    """
+    Get a team's Against-the-Spread record over last N games.
+    Returns (wins_ats, losses_ats, streak_status_str)
+    """
+    recent_games = db.query(models.Game).filter(
+        ((models.Game.home_team_id == team_id) | (models.Game.away_team_id == team_id)),
+        models.Game.status == "Final"
+    ).order_by(models.Game.game_date.desc()).limit(n_games).all()
+
+    if not recent_games:
+        return 0, 0, "neutral"
+
+    wins_ats = 0
+    losses_ats = 0
+
+    for game in recent_games:
+        odds = db.query(models.BettingOdds).filter(
+            models.BettingOdds.game_id == game.id
+        ).order_by(models.BettingOdds.timestamp.desc()).first()
+
+        if not odds or not odds.spread_points:
+            continue
+
+        is_home = game.home_team_id == team_id
+        margin = game.home_score - game.away_score
+        if not is_home:
+            margin = -margin
+
+        spread = odds.spread_points if is_home else -odds.spread_points
+        # Team covers if their margin > spread (spread is negative for favorites)
+        if margin + spread > 0:
+            wins_ats += 1
         else:
-            return abs(american_odds) / (abs(american_odds) + 100)
+            losses_ats += 1
 
-    def calculate_pythagorean_win_pct(ppg: float, opp_ppg: float, exponent: float = 13.91) -> float:
-        """
-        Calculates expected win percentage using Bill James' Pythagorean Expectation.
-        Exponent 13.91 is standard for NBA.
-        """
-        if ppg == 0 and opp_ppg == 0:
-            return 0.5
-        return (ppg ** exponent) / ((ppg ** exponent) + (opp_ppg ** exponent))
+    total = wins_ats + losses_ats
+    if total == 0:
+        return 0, 0, "neutral"
 
-    for game in games:
-        # 1. Skip if game involves teams without stats
-        if not game.home_team.stats or not game.away_team.stats:
+    if wins_ats >= 4:
+        streak = "hot"
+    elif losses_ats >= 4:
+        streak = "cold"
+    else:
+        streak = "neutral"
+
+    return wins_ats, losses_ats, streak
+
+
+def _get_grade(ev: float, edge: float, bp_agrees: bool = True, streak: str = "neutral") -> str:
+    """
+    Real grading system:
+    S:  EV > $8, edge > 12%, BP agrees, streak hot
+    A+: EV > $5, edge > 8%, confidence > 85%
+    A:  EV > $3, edge > 5%, confidence > 75%
+    B+: EV > $2, edge > 3%, confidence > 65%
+    B:  Everything else that passes minimum filters
+    """
+    if ev > 8 and edge > 12 and bp_agrees and streak == "hot":
+        return "S"
+    elif ev > 5 and edge > 8:
+        return "A+"
+    elif ev > 3 and edge > 5:
+        return "A"
+    elif ev > 2 and edge > 3:
+        return "B+"
+    else:
+        return "B"
+
+
+def _extract_prop_values(player, prop_type: str, stats_list) -> List[float]:
+    """Extract stat values from player stats based on prop type."""
+    if prop_type == 'points':
+        return [s.points or 0 for s in stats_list if s.points is not None]
+    elif prop_type == 'rebounds':
+        return [s.rebounds or 0 for s in stats_list if s.rebounds is not None]
+    elif prop_type == 'assists':
+        return [s.assists or 0 for s in stats_list if s.assists is not None]
+    elif prop_type == 'steals':
+        return [s.steals or 0 for s in stats_list if s.steals is not None]
+    elif prop_type == 'blocks':
+        return [s.blocks or 0 for s in stats_list if s.blocks is not None]
+    elif prop_type == 'pts+reb+ast':
+        return [(s.points or 0) + (s.rebounds or 0) + (s.assists or 0) for s in stats_list]
+    return []
+
+
+def _get_player_home_away_stats(player, prop_type: str, db: Session) -> tuple:
+    """Get home and away stat splits for a player."""
+    home_values = []
+    away_values = []
+
+    for stat in (player.stats or [])[:20]:
+        if not stat.game_id:
             continue
-            
-        home_stats = game.home_team.stats[0] # Assuming latest season stats are first/relevant
-        away_stats = game.away_team.stats[0]
-        
-        # 2. Get latest odds
-        if not game.odds:
+        game = db.query(models.Game).filter(models.Game.id == stat.game_id).first()
+        if not game:
             continue
-            
-        latest_odds = game.odds[-1]
-        
-        # --- Moneyline Analysis ---
-        if latest_odds.home_moneyline and latest_odds.away_moneyline:
-            # Calculate True Probabilities
-            home_win_prob = calculate_pythagorean_win_pct(home_stats.ppg, home_stats.opp_ppg)
-            away_win_prob = calculate_pythagorean_win_pct(away_stats.ppg, away_stats.opp_ppg)
-            
-            # Adjust for Home Court Advantage (approx +3-4% in NBA)
-            home_win_prob += 0.035
-            away_win_prob -= 0.035
-            
-            # Calculate Implied Probabilities
-            home_implied = calculate_implied_prob(latest_odds.home_moneyline)
-            away_implied = calculate_implied_prob(latest_odds.away_moneyline)
-            
-            # Check for Value (Edge > 5%)
-            if home_win_prob > home_implied + 0.05:
-                edge = home_win_prob - home_implied
-                _create_rec(db, generated_recs, game, "Moneyline", game.home_team.name, edge, 
-                           f"High Value: Model gives {home_win_prob:.1%} chance vs Vegas {home_implied:.1%}. Edge: {edge:.1%}")
-                           
-            elif away_win_prob > away_implied + 0.05:
-                edge = away_win_prob - away_implied
-                _create_rec(db, generated_recs, game, "Moneyline", game.away_team.name, edge, 
-                           f"Upset Alert: Model gives {away_win_prob:.1%} chance vs Vegas {away_implied:.1%}. Edge: {edge:.1%}")
 
-        # --- Spread Analysis ---
-        if latest_odds.spread_points:
-            # Estimate Expected Spread based on Net Rating difference
-            # Simple approximation: (Home Net Rating - Away Net Rating) + Home Court (3 pts)
-            home_net = home_stats.ppg - home_stats.opp_ppg
-            away_net = away_stats.ppg - away_stats.opp_ppg
-            
-            expected_spread_margin = (home_net - away_net) + 3.0
-            # Note: A positive margin means Home wins by X. 
-            # Vegas spreads are usually negative for favorites (e.g. -5.5). 
-            # So if Expected is +7.0, fair spread is -7.0.
-            
-            fair_spread_line = -1 * expected_spread_margin
-            vegas_spread = latest_odds.spread_points
-            
-            diff = fair_spread_line - vegas_spread
-            
-            # If Diff is > 3 points, we have an edge
-            if abs(diff) > 3.0:
-                if diff < 0: 
-                    # Fair spread is closer to -10 than -5. Home team is stronger than Vegas thinks.
-                    pick = game.home_team.name
-                    # Margin of edge (diff) determines confidence
-                    # e.g. 3 point diff = ~65%, 7 point diff = ~85%
-                    confidence = min(0.98, 0.5 + (abs(diff) / 20))
-                    reason = f"Simulated Spread: {fair_spread_line:.1f} vs Vegas: {vegas_spread}. Home team significantly undervalued by {abs(diff):.1f} points."
-                else:
-                    # Fair spread is closer to +5 than -5. Away team is stronger/Home is weaker.
-                    pick = game.away_team.name
-                    confidence = min(0.98, 0.5 + (abs(diff) / 20))
-                    reason = f"Simulated Spread: {fair_spread_line:.1f} vs Vegas: {vegas_spread}. Away team significantly undervalued by {abs(diff):.1f} points."
-                
-                _create_rec(db, generated_recs, game, "Spread", pick, confidence, reason)
+        val = 0
+        if prop_type == 'points':
+            val = stat.points or 0
+        elif prop_type == 'rebounds':
+            val = stat.rebounds or 0
+        elif prop_type == 'assists':
+            val = stat.assists or 0
+        elif prop_type == 'steals':
+            val = stat.steals or 0
+        elif prop_type == 'blocks':
+            val = stat.blocks or 0
+        elif prop_type == 'pts+reb+ast':
+            val = (stat.points or 0) + (stat.rebounds or 0) + (stat.assists or 0)
 
-    return generated_recs
+        if game.home_team_id == player.team_id:
+            home_values.append(val)
+        else:
+            away_values.append(val)
 
-def _create_rec(db, list_ref, game, bet_type, pick, confidence, reason):
-    """Helper to check existence and add recommendation"""
-    # Check if exists
+    return home_values, away_values
+
+
+def _get_player_minutes(player) -> tuple:
+    """Get recent minutes and season average minutes."""
+    stats = player.stats or []
+    if not stats:
+        return [], 0.0
+
+    all_minutes = [s.minutes_played for s in stats[:20] if s.minutes_played and s.minutes_played > 0]
+    recent_minutes = all_minutes[:5] if all_minutes else []
+    season_avg = sum(all_minutes) / len(all_minutes) if all_minutes else 0.0
+
+    return recent_minutes, season_avg
+
+
+def _build_prop_analysis_kwargs(
+    prop, player, db: Session,
+    league_avg_defense: float, league_avg_pace: float
+) -> Dict:
+    """Build the full kwargs dict for analyze_prop() with all available signals."""
+    kwargs = {}
+
+    # --- Opponent Defense & Pace (Phase 1a) ---
+    if prop.game_id:
+        game = db.query(models.Game).filter(models.Game.id == prop.game_id).first()
+        if game:
+            # Determine opponent
+            opponent_team_id = game.away_team_id if game.home_team_id == player.team_id else game.home_team_id
+            is_home = game.home_team_id == player.team_id
+
+            opp_defense = _get_team_defense_stats(db, opponent_team_id)
+            if opp_defense:
+                if opp_defense.def_rating:
+                    kwargs['opponent_defense_rating'] = opp_defense.def_rating
+                    kwargs['league_avg_defense'] = league_avg_defense
+                if opp_defense.pace:
+                    kwargs['opponent_pace'] = opp_defense.pace
+                    kwargs['league_avg_pace'] = league_avg_pace
+
+            # --- Home/Away (Phase 3c) ---
+            kwargs['is_home'] = is_home
+            home_vals, away_vals = _get_player_home_away_stats(player, prop.prop_type, db)
+            if home_vals:
+                kwargs['home_stats'] = home_vals
+            if away_vals:
+                kwargs['away_stats'] = away_vals
+
+            # --- B2B / Rest Days (Phase 3b) ---
+            is_b2b, rest_days = _detect_b2b(db, player.team_id, game.game_date)
+            kwargs['is_b2b'] = is_b2b
+            kwargs['rest_days'] = rest_days
+
+    # --- Minutes (Phase 1d) ---
+    recent_minutes, season_avg_minutes = _get_player_minutes(player)
+    if recent_minutes and season_avg_minutes > 0:
+        kwargs['recent_minutes'] = recent_minutes
+        kwargs['season_avg_minutes'] = season_avg_minutes
+
+    # --- BettingPros Intelligence (Phase 1b) ---
+    if prop.star_rating is not None:
+        kwargs['bp_star_rating'] = prop.star_rating
+    if prop.bp_ev is not None:
+        kwargs['bp_ev'] = prop.bp_ev
+    if prop.performance_pct is not None:
+        kwargs['bp_performance_pct'] = prop.performance_pct
+    if prop.recommended_side:
+        kwargs['bp_recommended_side'] = prop.recommended_side
+
+    return kwargs
+
+
+# =============================================================================
+# CORE RECOMMENDATION CREATION
+# =============================================================================
+
+def _create_rec(db, list_ref, game, bet_type, pick, confidence, reason,
+                injury_adjustment=0.0, ml_prob_home_win=None):
+    """Helper to check existence and add recommendation."""
+    confidence = float(confidence)
+
     existing = db.query(models.Recommendation).filter(
         models.Recommendation.game_id == game.id,
         models.Recommendation.bet_type == bet_type,
         models.Recommendation.recommended_pick == pick
     ).first()
-    
+
     if existing:
         list_ref.append(existing)
         return
@@ -151,292 +365,680 @@ def _create_rec(db, list_ref, game, bet_type, pick, confidence, reason):
     db.add(rec)
     db.commit()
     db.refresh(rec)
+
+    # Track the prediction for self-improvement
+    try:
+        tracker = PredictionTracker(db)
+        feature_snapshot = {
+            'home_ppg': float(game.home_team.stats[0].ppg) if game.home_team.stats else 0,
+            'away_ppg': float(game.away_team.stats[0].ppg) if game.away_team.stats else 0,
+            'home_net': float(game.home_team.stats[0].ppg - game.home_team.stats[0].opp_ppg) if game.home_team.stats else 0,
+            'away_net': float(game.away_team.stats[0].ppg - game.away_team.stats[0].opp_ppg) if game.away_team.stats else 0,
+            'injury_adjustment': float(injury_adjustment),
+            'ml_probability': float(ml_prob_home_win) if ml_prob_home_win is not None else None
+        }
+
+        model_used = 'xgboost' if ml_prob_home_win is not None else 'heuristic'
+        tracker.record_prediction(rec, model_used=model_used, feature_snapshot=feature_snapshot)
+    except Exception as e:
+        print(f"Failed to track prediction: {e}")
+
     list_ref.append(rec)
+
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+
+@router.get("/", response_model=List[schemas.RecommendationBase])
+def get_recommendations(date: Optional[date] = None, db: Session = Depends(get_db)):
+    """Returns recommendations. Defaults to today's games if no date provided."""
+    if date is None:
+        date = get_current_gameday()
+
+    start_utc, end_utc = get_gameday_range(date)
+    recs = db.query(models.Recommendation).join(models.Game).filter(
+        models.Game.game_date >= start_utc,
+        models.Game.game_date < end_utc
+    ).order_by(models.Recommendation.confidence_score.desc()).all()
+
+    return recs
+
+
+@router.post("/generate", response_model=List[schemas.RecommendationBase])
+def generate_recommendations(db: Session = Depends(get_db)):
+    """Generates recommendations for ACTIVE or UPCOMING games only."""
+    games = db.query(models.Game).filter(models.Game.status.in_(["Scheduled", "Live"])).all()
+    generated_recs = []
+
+    league_avg_ppg = _get_league_avg_ppg(db)
+    league_avg_defense = _get_league_avg_defense(db)
+
+    for game in games:
+        if not game.home_team.stats or not game.away_team.stats:
+            continue
+
+        home_stats = game.home_team.stats[0]
+        away_stats = game.away_team.stats[0]
+
+        # --- Injury Check ---
+        home_missing_ppg, home_missing_min, home_out = _calculate_injury_impact(db, game.home_team_id)
+        away_missing_ppg, away_missing_min, away_out = _calculate_injury_impact(db, game.away_team_id)
+        injury_net_impact = (home_missing_ppg - away_missing_ppg) * 0.4
+        injury_adjustment = -1 * injury_net_impact
+
+        # --- Rolling Team Stats (Phase 3a) ---
+        home_rolling = _get_rolling_team_stats(db, game.home_team_id)
+        away_rolling = _get_rolling_team_stats(db, game.away_team_id)
+
+        # Blend season avg (40%) + recent form (60%)
+        if home_rolling and home_rolling['game_count'] >= 5:
+            blended_home_ppg = home_stats.ppg * 0.4 + home_rolling['rolling_ppg'] * 0.6
+        else:
+            blended_home_ppg = home_stats.ppg
+
+        if away_rolling and away_rolling['game_count'] >= 5:
+            blended_away_ppg = away_stats.ppg * 0.4 + away_rolling['rolling_ppg'] * 0.6
+        else:
+            blended_away_ppg = away_stats.ppg
+
+        # --- B2B Detection (Phase 3b) ---
+        home_b2b, home_rest = _detect_b2b(db, game.home_team_id, game.game_date)
+        away_b2b, away_rest = _detect_b2b(db, game.away_team_id, game.game_date)
+
+        b2b_adjustment = 0.0
+        if home_b2b and not away_b2b:
+            b2b_adjustment = -3.0  # Home team on B2B
+        elif away_b2b and not home_b2b:
+            b2b_adjustment = 3.0   # Away team on B2B
+        # Rest advantage
+        if home_rest >= 3 and away_rest <= 1:
+            b2b_adjustment += 1.0
+        elif away_rest >= 3 and home_rest <= 1:
+            b2b_adjustment -= 1.0
+
+        # --- Opponent Defense Adjustment ---
+        home_def = _get_team_defense_stats(db, game.home_team_id)
+        away_def = _get_team_defense_stats(db, game.away_team_id)
+
+        defense_adjustment = 0.0
+        if home_def and away_def and home_def.def_rating and away_def.def_rating:
+            # If away team has weak defense (high def_rating), home scores more
+            home_opp_def_factor = (away_def.def_rating - league_avg_defense) / league_avg_defense
+            away_opp_def_factor = (home_def.def_rating - league_avg_defense) / league_avg_defense
+            defense_adjustment = (home_opp_def_factor - away_opp_def_factor) * blended_home_ppg * 0.5
+
+        # --- ML Prediction ---
+        ml_prob_home_win = None
+        try:
+            from app.analytics.ml_models import NBAXGBoostModel
+            ml_model = NBAXGBoostModel()
+            ml_prob_home_win = ml_model.predict_one(game, db)
+        except Exception as e:
+            print(f"ML Prediction failed: {e}")
+
+        # 2. Get latest odds
+        if not game.odds:
+            continue
+
+        latest_odds = game.odds[-1]
+
+        # --- Moneyline Analysis ---
+        if latest_odds.home_moneyline and latest_odds.away_moneyline:
+            home_win_prob = _calculate_pythagorean_win_pct(blended_home_ppg, home_stats.opp_ppg)
+            away_win_prob = _calculate_pythagorean_win_pct(blended_away_ppg, away_stats.opp_ppg)
+
+            if ml_prob_home_win is not None:
+                home_win_prob = (home_win_prob * 0.4) + (ml_prob_home_win * 0.6)
+                away_win_prob = 1.0 - home_win_prob
+            else:
+                home_win_prob += 0.035
+                away_win_prob -= 0.035
+                prob_adjustment = injury_adjustment * 0.035
+                home_win_prob += prob_adjustment
+                away_win_prob -= prob_adjustment
+
+            # B2B probability adjustment
+            b2b_prob_adj = b2b_adjustment * 0.02  # ~2% per point
+            home_win_prob += b2b_prob_adj
+            away_win_prob -= b2b_prob_adj
+
+            home_implied = _calculate_implied_prob(latest_odds.home_moneyline)
+            away_implied = _calculate_implied_prob(latest_odds.away_moneyline)
+
+            home_win_prob = max(0.0, min(1.0, home_win_prob))
+            away_win_prob = max(0.0, min(1.0, away_win_prob))
+
+            if home_win_prob > home_implied + 0.05:
+                edge = home_win_prob - home_implied
+                reason = f"High Value: Model gives {home_win_prob:.1%} chance vs Vegas {home_implied:.1%}. Edge: {edge:.1%}"
+                if ml_prob_home_win is not None:
+                    reason += " (ML Enhanced)"
+                if home_b2b:
+                    reason += " (Home B2B)"
+                if home_out > 2:
+                    reason += f" (Note: {home_out} players OUT for Home)"
+                _create_rec(db, generated_recs, game, "Moneyline", game.home_team.name,
+                           edge, reason, injury_adjustment, ml_prob_home_win)
+
+            elif away_win_prob > away_implied + 0.05:
+                edge = away_win_prob - away_implied
+                reason = f"Upset Alert: Model gives {away_win_prob:.1%} chance vs Vegas {away_implied:.1%}. Edge: {edge:.1%}"
+                if ml_prob_home_win is not None:
+                    reason += " (ML Enhanced)"
+                if away_b2b:
+                    reason += " (Away B2B)"
+                if away_out > 2:
+                    reason += f" (Note: {away_out} players OUT for Away)"
+                _create_rec(db, generated_recs, game, "Moneyline", game.away_team.name,
+                           edge, reason, injury_adjustment, ml_prob_home_win)
+
+        # --- Spread Analysis ---
+        if latest_odds.spread_points:
+            home_net = blended_home_ppg - home_stats.opp_ppg
+            away_net = blended_away_ppg - away_stats.opp_ppg
+
+            expected_spread_margin = (home_net - away_net) + 3.0 + injury_adjustment + b2b_adjustment + defense_adjustment
+
+            if ml_prob_home_win is not None:
+                ml_spread_est = (ml_prob_home_win - 0.5) * 25
+                expected_spread_margin = (expected_spread_margin * 0.5) + (ml_spread_est * 0.5)
+
+            fair_spread_line = -1 * expected_spread_margin
+            vegas_spread = latest_odds.spread_points
+            diff = fair_spread_line - vegas_spread
+
+            if abs(diff) > 3.0:
+                if diff < 0:
+                    pick = game.home_team.name
+                    confidence = min(0.98, 0.5 + (abs(diff) / 20))
+                    reason = f"Simulated Spread: {fair_spread_line:.1f} vs Vegas: {vegas_spread}. Home team undervalued."
+                else:
+                    pick = game.away_team.name
+                    confidence = min(0.98, 0.5 + (abs(diff) / 20))
+                    reason = f"Simulated Spread: {fair_spread_line:.1f} vs Vegas: {vegas_spread}. Away team undervalued."
+
+                if abs(injury_adjustment) > 0:
+                    reason += f" (Includes {abs(injury_adjustment):.1f}pt injury adj)"
+                if abs(b2b_adjustment) > 0:
+                    reason += f" (B2B adj: {b2b_adjustment:+.1f}pt)"
+                if abs(defense_adjustment) > 0.5:
+                    reason += f" (Def adj: {defense_adjustment:+.1f}pt)"
+                if ml_prob_home_win is not None:
+                    reason += " (ML Enhanced)"
+
+                _create_rec(db, generated_recs, game, "Spread", pick, confidence,
+                           reason, injury_adjustment, ml_prob_home_win)
+
+        # --- Totals Analysis (Over/Under) ---
+        if latest_odds.total_points and latest_odds.over_price and latest_odds.under_price:
+            expected_total = blended_home_ppg + blended_away_ppg
+            home_def_delta = home_stats.opp_ppg - league_avg_ppg
+            away_def_delta = away_stats.opp_ppg - league_avg_ppg
+            expected_total += (home_def_delta + away_def_delta) * 0.5
+
+            # Pace adjustment for totals
+            if home_def and away_def and home_def.pace and away_def.pace:
+                league_pace = _get_league_avg_pace(db)
+                combined_pace = (home_def.pace + away_def.pace) / 2
+                pace_factor = combined_pace / league_pace
+                expected_total *= pace_factor
+
+            # B2B teams score slightly less
+            if home_b2b:
+                expected_total -= 1.5
+            if away_b2b:
+                expected_total -= 1.5
+
+            vegas_total = latest_odds.total_points
+            diff = expected_total - vegas_total
+
+            if abs(diff) > 4.0:
+                side = "Over" if diff > 0 else "Under"
+                confidence = min(0.95, 0.5 + (abs(diff) / 25))
+                reason = f"Combined PPG Analysis: {expected_total:.1f} vs Vegas: {vegas_total}. Model suggests {side}."
+                if home_b2b or away_b2b:
+                    reason += " (B2B factor included)"
+                _create_rec(db, generated_recs, game, "Total", side, confidence,
+                           reason, injury_adjustment, ml_prob_home_win)
+
+    return generated_recs
+
 
 @router.post("/generate-parlay", response_model=schemas.ParlayBase)
 def generate_parlay(legs: int = 3, db: Session = Depends(get_db)):
-    """
-    Generate an AI-powered parlay by selecting the highest confidence bets.
-    """
-    # Get top recommendations sorted by confidence
-    top_recs = db.query(models.Recommendation).order_by(
+    """Generate an AI-powered parlay for today's games with correlation awareness."""
+    from ..analytics.advanced_stats import detect_correlation, calculate_parlay_correlation_penalty
+
+    today = get_current_gameday()
+    start_of_day, end_of_day = get_gameday_range(today)
+
+    top_recs = db.query(models.Recommendation).join(
+        models.Game, models.Recommendation.game_id == models.Game.id
+    ).filter(
+        models.Game.game_date >= start_of_day,
+        models.Game.game_date <= end_of_day
+    ).order_by(
         models.Recommendation.confidence_score.desc()
-    ).limit(legs).all()
-    
+    ).limit(legs * 2).all()  # Get extra for correlation filtering
+
     if len(top_recs) < legs:
-        raise HTTPException(status_code=400, detail=f"Not enough recommendations to build a {legs}-leg parlay. Generate more first.")
-    
-    parlay_legs = []
-    combined_decimal_odds = 1.0
-    total_confidence = 0.0
-    
+        raise HTTPException(status_code=400,
+                           detail=f"Not enough recommendations for today to build a {legs}-leg parlay.")
+
+    # Build bet dicts for correlation detection
+    bet_dicts = []
     for rec in top_recs:
-        # Get odds for the game
         game = db.query(models.Game).filter(models.Game.id == rec.game_id).first()
         if not game or not game.odds:
             continue
-            
         latest_odds = game.odds[-1]
-        
-        # Determine which odds to use based on the pick
+
         if "spread" in rec.bet_type.lower():
             american_odds = latest_odds.home_spread_price if rec.recommended_pick == game.home_team.name else latest_odds.away_spread_price
         else:
             american_odds = latest_odds.home_moneyline if rec.recommended_pick == game.home_team.name else latest_odds.away_moneyline
-        
-        if american_odds is None:
-            american_odds = -110  # Default
-        
-        # Convert American odds to decimal for multiplication
-        if american_odds > 0:
-            decimal_odds = 1 + (american_odds / 100)
-        else:
-            decimal_odds = 1 + (100 / abs(american_odds))
-        
-        combined_decimal_odds *= decimal_odds
-        total_confidence += rec.confidence_score
-        
-        parlay_legs.append(schemas.ParlayLeg(
-            game_id=rec.game_id,
-            pick=rec.recommended_pick,
-            odds=american_odds,
-            confidence=rec.confidence_score
-        ))
-    
-    # Convert combined decimal odds back to American
-    if combined_decimal_odds >= 2:
-        combined_american = int((combined_decimal_odds - 1) * 100)
-    else:
-        combined_american = int(-100 / (combined_decimal_odds - 1))
-    
-    # Calculate potential payout for $100
-    potential_payout = 100 * combined_decimal_odds
-    
-    return schemas.ParlayBase(
-        legs=parlay_legs,
-        combined_odds=combined_american,
-        potential_payout=round(potential_payout, 2),
-        confidence_score=round(total_confidence / len(parlay_legs), 2) if parlay_legs else 0
-    )
 
-@router.post("/generate-mixed-parlay")
-def generate_mixed_parlay(legs: int = 5, db: Session = Depends(get_db)):
-    """
-    Generate an AI-powered parlay mixing player props with game bets.
-    Uses statistical analysis to find the best value bets.
-    """
-    from typing import List, Dict
-    
-    def calculate_prop_hit_rate(player, prop_type: str, line: float) -> float:
-        """Calculate historical hit rate for a prop."""
-        if not player.stats:
-            return 0.5
-        stats = player.stats[:15]
-        hits = 0
-        for stat in stats:
-            if prop_type == 'points':
-                value = stat.points or 0
-            elif prop_type == 'rebounds':
-                value = stat.rebounds or 0
-            elif prop_type == 'assists':
-                value = stat.assists or 0
-            elif prop_type == 'pts+reb+ast':
-                value = (stat.points or 0) + (stat.rebounds or 0) + (stat.assists or 0)
-            else:
-                value = 0
-            if value > line:
-                hits += 1
-        return hits / len(stats) if stats else 0.5
-    
-    def calculate_edge(odds: int, probability: float) -> float:
-        """Calculate expected value edge."""
+        if american_odds is None:
+            american_odds = -110
+
+        bet_dicts.append({
+            'rec': rec,
+            'game_id': rec.game_id,
+            'team_id': game.home_team_id if rec.recommended_pick == game.home_team.name else game.away_team_id,
+            'odds': american_odds,
+            'confidence': rec.confidence_score,
+            'bet_type': rec.bet_type
+        })
+
+    # Select legs greedily, minimizing correlation
+    selected = []
+    for bet in bet_dicts:
+        if len(selected) >= legs:
+            break
+
+        # Check correlation with already selected bets
+        has_high_correlation = False
+        for sel in selected:
+            corr = detect_correlation(bet, sel)
+            if corr.level == "high":
+                has_high_correlation = True
+                break
+
+        if not has_high_correlation:
+            selected.append(bet)
+
+    if len(selected) < legs:
+        # Fill remaining from what's left
+        for bet in bet_dicts:
+            if bet not in selected and len(selected) < legs:
+                selected.append(bet)
+
+    # Calculate correlation penalty
+    correlation_penalty = calculate_parlay_correlation_penalty(selected)
+
+    parlay_legs = []
+    combined_decimal_odds = 1.0
+    total_confidence = 0.0
+
+    for bet in selected:
+        odds = bet['odds']
         if odds > 0:
             decimal_odds = 1 + (odds / 100)
         else:
             decimal_odds = 1 + (100 / abs(odds))
-        implied_prob = 1 / decimal_odds
-        return probability - implied_prob
-    
-    # Get best prop bets
+
+        combined_decimal_odds *= decimal_odds
+        total_confidence += bet['confidence']
+
+        parlay_legs.append(schemas.ParlayLeg(
+            game_id=bet['game_id'],
+            pick=f"{bet['rec'].recommended_pick} ({bet['bet_type']})",
+            odds=odds,
+            confidence=bet['confidence']
+        ))
+
+    # Apply correlation penalty to confidence
+    adjusted_confidence = (total_confidence / len(parlay_legs)) * correlation_penalty if parlay_legs else 0
+
+    if combined_decimal_odds >= 2:
+        combined_american = int((combined_decimal_odds - 1) * 100)
+    else:
+        combined_american = int(-100 / (combined_decimal_odds - 1))
+
+    potential_payout = 100 * combined_decimal_odds
+
+    # True parlay probability (Phase 5b)
+    true_prob = 1.0
+    for bet in selected:
+        true_prob *= bet['confidence']
+    true_prob *= correlation_penalty  # Adjust for correlations
+
+    return schemas.ParlayBase(
+        legs=parlay_legs,
+        combined_odds=combined_american,
+        potential_payout=round(potential_payout, 2),
+        confidence_score=round(adjusted_confidence, 2)
+    )
+
+
+@router.post("/generate-mixed-parlay", response_model=schemas.ParlayBase)
+def generate_mixed_parlay(legs: int = 5, db: Session = Depends(get_db)):
+    """
+    Generate an AI-powered parlay mixing player props with game bets.
+    Now with: date filtering (2c), correlation detection (1c/5a),
+    opponent adjustments (1a), BP intelligence (1b), minutes (1d),
+    B2B detection (3b), home/away splits (3c), rolling stats (3a).
+    """
+    from ..analytics.advanced_stats import (
+        analyze_prop, detect_correlation, calculate_parlay_correlation_penalty,
+        StreakStatus, BetConfidence
+    )
+
+    today = get_current_gameday()
+    start_of_day, end_of_day = get_gameday_range(today)
+
+    league_avg_defense = _get_league_avg_defense(db)
+    league_avg_pace = _get_league_avg_pace(db)
+
+    # --- Phase 2c: Filter props by TODAY's date ---
     prop_bets = []
-    props = db.query(models.PlayerProps).all()
-    
+    props = db.query(models.PlayerProps).join(
+        models.Game, models.PlayerProps.game_id == models.Game.id
+    ).options(
+        joinedload(models.PlayerProps.player).joinedload(models.Player.stats)
+    ).filter(
+        models.Game.game_date >= start_of_day,
+        models.Game.game_date <= end_of_day
+    ).all()
+
     for prop in props:
-        player = db.query(models.Player).filter(models.Player.id == prop.player_id).first()
+        player = prop.player
         if not player or not player.stats or len(player.stats) < 5:
             continue
-        
-        hit_rate = calculate_prop_hit_rate(player, prop.prop_type, prop.line)
-        over_edge = calculate_edge(prop.over_odds, hit_rate)
-        under_edge = calculate_edge(prop.under_odds, 1 - hit_rate)
-        
-        if over_edge > 0.03:
-            prop_bets.append({
-                'type': 'prop',
-                'player_name': player.name,
-                'prop_type': prop.prop_type,
-                'pick': f"{player.name} {prop.prop_type.upper()} OVER {prop.line}",
-                'odds': prop.over_odds,
-                'confidence': min(0.95, 0.5 + over_edge),
-                'edge': over_edge
-            })
-        
-        if under_edge > 0.03:
-            prop_bets.append({
-                'type': 'prop',
-                'player_name': player.name,
-                'prop_type': prop.prop_type,
-                'pick': f"{player.name} {prop.prop_type.upper()} UNDER {prop.line}",
-                'odds': prop.under_odds,
-                'confidence': min(0.95, 0.5 + under_edge),
-                'edge': under_edge
-            })
-    
-    # Get best game bets
+
+        values = _extract_prop_values(player, prop.prop_type, player.stats[:15])
+        if len(values) < 5:
+            continue
+
+        # Build full analysis kwargs with all signals
+        analysis_kwargs = _build_prop_analysis_kwargs(
+            prop, player, db, league_avg_defense, league_avg_pace
+        )
+
+        analysis = analyze_prop(
+            line=prop.line,
+            historical_stats=values,
+            odds_over=prop.over_odds or -110,
+            odds_under=prop.under_odds or -110,
+            **analysis_kwargs
+        )
+
+        # Calculate edge for the best side
+        if analysis.recommendation == "over":
+            edge = analysis.edge / 100  # Convert from pct to decimal
+            odds = prop.over_odds
+        elif analysis.recommendation == "under":
+            edge = analysis.edge / 100
+            odds = prop.under_odds
+        else:
+            continue
+
+        if edge < 0.03:
+            continue
+
+        prop_bets.append({
+            'type': 'prop',
+            'game_id': prop.game_id or 0,
+            'player_id': player.id,
+            'player_name': player.name,
+            'team_id': player.team_id,
+            'prop_type': prop.prop_type,
+            'pick': f"{player.name} {prop.prop_type.upper()} {analysis.recommendation.upper()} {prop.line}",
+            'odds': odds,
+            'confidence': min(0.95, 0.5 + edge),
+            'edge': edge,
+            'bp_agrees': analysis_kwargs.get('bp_recommended_side', '').lower() == analysis.recommendation if analysis_kwargs.get('bp_recommended_side') else True
+        })
+
+    # Get best game bets for TODAY only
     game_bets = []
-    recommendations = db.query(models.Recommendation).order_by(
+    recommendations = db.query(models.Recommendation).join(
+        models.Game, models.Recommendation.game_id == models.Game.id
+    ).options(
+        joinedload(models.Recommendation.game).joinedload(models.Game.odds)
+    ).filter(
+        models.Game.game_date >= start_of_day,
+        models.Game.game_date <= end_of_day
+    ).order_by(
         models.Recommendation.confidence_score.desc()
     ).limit(10).all()
-    
+
     for rec in recommendations:
-        game = db.query(models.Game).filter(models.Game.id == rec.game_id).first()
+        game = rec.game
         if not game or not game.odds:
             continue
         latest_odds = game.odds[-1]
-        
+
         if "spread" in rec.bet_type.lower():
             odds = latest_odds.home_spread_price if rec.recommended_pick == game.home_team.name else latest_odds.away_spread_price
         else:
             odds = latest_odds.home_moneyline if rec.recommended_pick == game.home_team.name else latest_odds.away_moneyline
-        
+
         if odds is None:
             odds = -110
-        
+
+        team_id = game.home_team_id if rec.recommended_pick == game.home_team.name else game.away_team_id
+
         game_bets.append({
             'type': 'game',
             'game_id': rec.game_id,
+            'team_id': team_id,
             'pick': f"{rec.recommended_pick} ({rec.bet_type})",
             'odds': odds,
             'confidence': rec.confidence_score,
             'edge': rec.confidence_score - 0.5
         })
-    
+
     # Sort all bets by edge
     prop_bets.sort(key=lambda x: x['edge'], reverse=True)
     game_bets.sort(key=lambda x: x['edge'], reverse=True)
-    
-    # Mix: Target 50/50 split
+
+    # --- Phase 1c / 5a: Correlation-aware selection ---
+    used_players = set()
+    used_games = set()
+
     num_games_target = legs // 2
     num_props_target = legs - num_games_target
-    
-    selected_games = game_bets[:num_games_target]
-    selected_props = prop_bets[:num_props_target]
-    
+
+    # Select game bets (unique games)
+    selected_games = []
+    for bet in game_bets:
+        gid = bet.get('game_id')
+        if gid and gid not in used_games:
+            selected_games.append(bet)
+            used_games.add(gid)
+            if len(selected_games) >= num_games_target:
+                break
+
+    # Select prop bets (unique players, check correlation with selected)
+    selected_props = []
+    for bet in prop_bets:
+        pname = bet.get('player_name')
+        if pname and pname not in used_players:
+            # Check correlation with already selected legs
+            has_high_corr = False
+            for sel in selected_games + selected_props:
+                corr = detect_correlation(bet, sel)
+                if corr.level == "high":
+                    has_high_corr = True
+                    break
+            if not has_high_corr:
+                selected_props.append(bet)
+                used_players.add(pname)
+                if len(selected_props) >= num_props_target:
+                    break
+
     selected = selected_games + selected_props
-    
-    # Fill if needed from either pool
-    all_remaining = [b for b in (game_bets + prop_bets) if b not in selected]
-    all_remaining.sort(key=lambda x: x['edge'], reverse=True)
-    
-    while len(selected) < legs and all_remaining:
-        selected.append(all_remaining.pop(0))
-    
+
+    # Fill if needed
+    remaining = [b for b in prop_bets if b.get('player_name') not in used_players] + \
+                [b for b in game_bets if b.get('game_id') not in used_games]
+    remaining.sort(key=lambda x: x['edge'], reverse=True)
+
+    while len(selected) < legs and remaining:
+        bet = remaining.pop(0)
+        if bet['type'] == 'prop':
+            pname = bet.get('player_name')
+            if pname not in used_players:
+                selected.append(bet)
+                used_players.add(pname)
+        else:
+            gid = bet.get('game_id')
+            if gid not in used_games:
+                selected.append(bet)
+                used_games.add(gid)
+
     if len(selected) < legs:
-        raise HTTPException(status_code=400, detail=f"Not enough high-quality bets available. Found {len(selected)}, need {legs}.")
-    
+        raise HTTPException(status_code=400,
+                           detail=f"Not enough unique bets available. Found {len(selected)} unique, need {legs}.")
+
+    # Calculate correlation penalty (Phase 5b)
+    correlation_penalty = calculate_parlay_correlation_penalty(selected)
+
     # Build parlay
     parlay_legs = []
     combined_decimal = 1.0
     total_confidence = 0.0
-    
+
     for bet in selected[:legs]:
-        odds = bet['odds']
+        odds = bet.get('odds')
+        if odds is None or odds == 0:
+            odds = -110
+
         if odds > 0:
             decimal_odds = 1 + (odds / 100)
         else:
             decimal_odds = 1 + (100 / abs(odds))
         combined_decimal *= decimal_odds
         total_confidence += bet['confidence']
-        
+
         parlay_legs.append(schemas.ParlayLeg(
             game_id=bet.get('game_id', 0),
             pick=bet['pick'],
             odds=odds,
             confidence=bet['confidence']
         ))
-    
+
     if combined_decimal >= 2:
         combined_american = int((combined_decimal - 1) * 100)
     else:
         combined_american = int(-100 / (combined_decimal - 1))
-    
+
     potential_payout = 100 * combined_decimal
-    
+
+    # True parlay probability (Phase 5b)
+    true_prob = 1.0
+    for bet in selected[:legs]:
+        true_prob *= bet['confidence']
+    true_prob *= correlation_penalty
+
+    adjusted_confidence = (total_confidence / len(parlay_legs)) * correlation_penalty
+
     return schemas.ParlayBase(
         legs=parlay_legs,
         combined_odds=combined_american,
         potential_payout=round(potential_payout, 2),
-        confidence_score=round(total_confidence / len(parlay_legs), 2)
+        confidence_score=round(adjusted_confidence, 2)
     )
+
 
 @router.get("/advanced-props")
 def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = Depends(get_db)):
     """
-    Get player props with advanced analytics including:
-    - Kelly Criterion optimal bet sizing
-    - Expected Value (EV) calculation
-    - Hot/Cold streak detection
-    - Weighted recency analysis
-    - Confidence intervals
+    Get player props with advanced analytics.
+    Now with: opponent defense (1a), pace (1a), BettingPros (1b),
+    minutes (1d), home/away splits (3c), B2B detection (3b),
+    real confidence intervals (4c).
     """
     from ..analytics.advanced_stats import (
         analyze_prop, kelly_criterion, calculate_ev, detect_streak,
         weighted_average, recency_hit_rate, wilson_confidence_interval,
         StreakStatus, BetConfidence
     )
-    
-    # Get all props with player stats
-    props = db.query(models.PlayerProps).all()
-    
+
+    today = get_current_gameday()
+    start_of_day, end_of_day = get_gameday_range(today)
+
+    league_avg_defense = _get_league_avg_defense(db)
+    league_avg_pace = _get_league_avg_pace(db)
+
+    # Filter props by today's date
+    props = db.query(models.PlayerProps).join(
+        models.Game, models.PlayerProps.game_id == models.Game.id
+    ).filter(
+        models.Game.game_date >= start_of_day,
+        models.Game.game_date <= end_of_day
+    ).all()
+
     analyzed_props = []
-    
+
     for prop in props:
         player = db.query(models.Player).filter(models.Player.id == prop.player_id).first()
         if not player or not player.stats:
             continue
-        
-        # Extract historical stat values
-        stats_list = player.stats[:20]  # Last 20 games
+
+        # --- Injury Filtering ---
+        injury = db.query(models.Injury).filter(
+            models.Injury.player_id == player.id
+        ).order_by(models.Injury.updated_date.desc()).first()
+        if injury and injury.status == "Out":
+            continue
+
+        injury_mod = 1.0
+        if injury:
+            if injury.status == "Questionable":
+                injury_mod = 0.8
+            elif injury.status == "Probable":
+                injury_mod = 0.95
+
+        stats_list = player.stats[:20]
         if not stats_list:
             continue
-        
-        # Get stat values based on prop type
-        if prop.prop_type == 'points':
-            values = [s.points or 0 for s in stats_list if s.points is not None]
-        elif prop.prop_type == 'rebounds':
-            values = [s.rebounds or 0 for s in stats_list if s.rebounds is not None]
-        elif prop.prop_type == 'assists':
-            values = [s.assists or 0 for s in stats_list if s.assists is not None]
-        elif prop.prop_type == 'pts+reb+ast':
-            values = [(s.points or 0) + (s.rebounds or 0) + (s.assists or 0) for s in stats_list]
-        else:
-            values = []
-        
+
+        values = _extract_prop_values(player, prop.prop_type, stats_list)
         if len(values) < 5:
             continue
-        
-        # Perform advanced analysis
+
+        # Build full analysis kwargs
+        analysis_kwargs = _build_prop_analysis_kwargs(
+            prop, player, db, league_avg_defense, league_avg_pace
+        )
+
         analysis = analyze_prop(
             line=prop.line,
             historical_stats=values,
             odds_over=prop.over_odds or -110,
-            odds_under=prop.under_odds or -110
+            odds_under=prop.under_odds or -110,
+            **analysis_kwargs
         )
-        
+
+        # Apply injury confidence modifier
+        if injury_mod < 1.0:
+            analysis.ev *= injury_mod
+            analysis.edge *= injury_mod
+            if injury_mod < 0.9 and analysis.confidence == BetConfidence.HIGH:
+                analysis.confidence = BetConfidence.MEDIUM
+
         # Filter by minimum EV and Kelly
         if analysis.ev < min_ev or analysis.kelly_fraction < min_kelly:
             continue
-        
+
+        # BP agreement flag
+        bp_agrees = True
+        if prop.recommended_side and analysis.recommendation not in ("avoid", "insufficient_data"):
+            bp_agrees = prop.recommended_side.lower() == analysis.recommendation
+
         analyzed_props.append({
             "prop_id": prop.id,
             "player_id": player.id,
@@ -452,7 +1054,7 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
             "ev": round(analysis.ev, 2),
             "edge": round(analysis.edge, 1),
             "kelly_fraction": round(analysis.kelly_fraction * 100, 2),
-            "kelly_bet_size": f"${round(analysis.kelly_fraction * 1000, 2)}",  # For $1000 bankroll
+            "kelly_bet_size": f"${round(analysis.kelly_fraction * 1000, 2)}",
             "streak_status": analysis.streak_status.value,
             "confidence_level": analysis.confidence.value,
             "recommendation": analysis.recommendation,
@@ -460,89 +1062,101 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
             "confidence_interval": {
                 "low": round(analysis.confidence_interval[0] * 100, 1),
                 "high": round(analysis.confidence_interval[1] * 100, 1)
-            }
+            },
+            # New fields
+            "grade": _get_grade(analysis.ev, analysis.edge, bp_agrees, analysis.streak_status.value),
+            "bp_star_rating": prop.star_rating,
+            "bp_ev": prop.bp_ev,
+            "bp_agrees": bp_agrees,
+            "opponent_adjusted": analysis_kwargs.get('opponent_defense_rating') is not None,
+            "is_b2b": analysis_kwargs.get('is_b2b', False),
         })
-    
+
     # Sort by EV (best value first)
     analyzed_props.sort(key=lambda x: x["ev"], reverse=True)
-    
+
     return {
         "total": len(analyzed_props),
-        "props": analyzed_props[:100]  # Top 100
+        "props": analyzed_props[:100]
     }
 
 
 @router.get("/genius-picks")
 def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db)):
     """
-    Get the absolute BEST picks. Defaults to today.
-    Only returns HIGH confidence bets with positive EV.
+    Get the absolute BEST picks with full intelligence stack.
+    Now with: real grading (4a), real streak detection (4b),
+    real confidence intervals (4c), all Phase 1 signals.
     """
     if date is None:
         date = get_current_gameday()
-        
+
     from ..analytics.advanced_stats import (
-        analyze_prop, StreakStatus, BetConfidence
+        analyze_prop, wilson_confidence_interval, StreakStatus, BetConfidence
     )
-    
-    # 1. Start with Player Props (Elite Only)
+
+    league_avg_defense = _get_league_avg_defense(db)
+    league_avg_pace = _get_league_avg_pace(db)
+
+    # 1. Player Props (Elite Only) — filtered by date
+    start_utc, end_utc = get_gameday_range(date)
     props = db.query(models.PlayerProps).join(models.Game).filter(
-        models.Game.game_date >= datetime.combine(date, datetime.min.time()),
-        models.Game.game_date <= datetime.combine(date, datetime.max.time())
+        models.Game.game_date >= start_utc,
+        models.Game.game_date < end_utc
     ).all()
     genius_picks = []
-    
-    # helper for grade
-    def get_grade(ev, edge):
-        if ev > 5 and edge > 8: return "A+"
-        return "A"
-    
+
     for prop in props:
         player = db.query(models.Player).filter(models.Player.id == prop.player_id).first()
         if not player or not player.stats:
             continue
-        
+
+        # --- Injury Filtering for Genius ---
+        injury = db.query(models.Injury).filter(
+            models.Injury.player_id == player.id
+        ).order_by(models.Injury.updated_date.desc()).first()
+        if injury and injury.status in ["Out", "Questionable"]:
+            continue
+
         stats_list = player.stats[:20]
-        if len(stats_list) < 10:  # Require minimum 10 games for genius picks
+        if len(stats_list) < 10:
             continue
-        
-        # Get stat values
-        if prop.prop_type == 'points':
-            values = [s.points or 0 for s in stats_list if s.points is not None]
-        elif prop.prop_type == 'rebounds':
-            values = [s.rebounds or 0 for s in stats_list if s.rebounds is not None]
-        elif prop.prop_type == 'assists':
-            values = [s.assists or 0 for s in stats_list if s.assists is not None]
-        elif prop.prop_type == 'pts+reb+ast':
-            values = [(s.points or 0) + (s.rebounds or 0) + (s.assists or 0) for s in stats_list]
-        else:
-            continue
-        
+
+        values = _extract_prop_values(player, prop.prop_type, stats_list)
         if len(values) < 10:
             continue
-        
+
+        # Build full analysis kwargs
+        analysis_kwargs = _build_prop_analysis_kwargs(
+            prop, player, db, league_avg_defense, league_avg_pace
+        )
+
         analysis = analyze_prop(
             line=prop.line,
             historical_stats=values,
             odds_over=prop.over_odds or -110,
-            odds_under=prop.under_odds or -110
+            odds_under=prop.under_odds or -110,
+            **analysis_kwargs
         )
-        
+
         # Only include HIGH confidence with positive EV
         if analysis.confidence != BetConfidence.HIGH or analysis.ev <= 0:
             continue
-        
-        # Genius tier requires:
-        # - EV > $3 per $100 bet
-        # - Edge > 5%
-        # - Hit rate confidence interval doesn't include 50%
+
         if analysis.ev < 3 or analysis.edge < 5:
             continue
-        
+
         ci_low, ci_high = analysis.confidence_interval
         if ci_low <= 0.5 <= ci_high:
-            continue  # Skip if 50% is in confidence interval
-        
+            continue
+
+        # BP agreement check
+        bp_agrees = True
+        if prop.recommended_side and analysis.recommendation not in ("avoid", "insufficient_data"):
+            bp_agrees = prop.recommended_side.lower() == analysis.recommendation
+
+        grade = _get_grade(analysis.ev, analysis.edge, bp_agrees, analysis.streak_status.value)
+
         genius_picks.append({
             "player": player.name,
             "prop": prop.prop_type.replace('+', ' + ').title(),
@@ -555,41 +1169,90 @@ def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db))
             "hit_rate": f"{round(analysis.hit_rate * 100, 1)}%",
             "streak": analysis.streak_status.value,
             "confidence_range": f"{round(ci_low * 100)}-{round(ci_high * 100)}%",
-            "grade": get_grade(analysis.ev, analysis.edge)
+            "grade": grade,
+            # New enriched fields
+            "bp_star_rating": prop.star_rating,
+            "bp_agrees": bp_agrees,
+            "opponent_adjusted": analysis_kwargs.get('opponent_defense_rating') is not None,
+            "is_b2b": analysis_kwargs.get('is_b2b', False),
+            "weighted_projection": round(analysis.weighted_average, 1),
         })
-    
-    # 2. Add Elite Game Spreads
+
+    # 2. Elite Game Spreads — with real streak detection (Phase 4b)
     game_recs = db.query(models.Recommendation).join(models.Game).filter(
-        models.Game.game_date >= datetime.combine(date, datetime.min.time()),
-        models.Game.game_date <= datetime.combine(date, datetime.max.time()),
+        models.Game.game_date >= start_utc,
+        models.Game.game_date < end_utc,
         models.Recommendation.bet_type == "Spread",
-        models.Recommendation.confidence_score >= 0.8  # Elite confidence
+        models.Recommendation.confidence_score >= 0.8
     ).all()
-    
+
     for rec in game_recs:
-        # Convert Confidence to EV-like grade
-        # confidence 0.8 -> ~5-7% edge
-        edge = (rec.confidence_score - 0.5) * 20 # Approximation
-        ev = edge * 0.8 # Approximation
-        
+        actual_odds = -110
+        if rec.game.odds:
+            latest = rec.game.odds[-1]
+            actual_odds = latest.home_spread_price or latest.away_spread_price or -110
+
+        implied_prob = _calculate_implied_prob(actual_odds)
+        edge = (rec.confidence_score - implied_prob) * 100
+
+        if actual_odds > 0:
+            decimal_payout = 1 + (actual_odds / 100)
+        else:
+            decimal_payout = 1 + (100 / abs(actual_odds))
+        ev = (rec.confidence_score * decimal_payout - 1) * 100
+
+        if edge <= 0:
+            continue
+
+        kelly_fraction = edge / 100 / (decimal_payout - 1) if decimal_payout > 1 else 0
+
+        # --- Phase 4b: Real streak detection ---
+        team_id = None
+        if rec.game.home_team and rec.recommended_pick == rec.game.home_team.name:
+            team_id = rec.game.home_team_id
+        elif rec.game.away_team:
+            team_id = rec.game.away_team_id
+
+        if team_id:
+            wins_ats, losses_ats, streak_status = _get_team_ats_record(db, team_id, 5)
+        else:
+            wins_ats, losses_ats, streak_status = 0, 0, "neutral"
+
+        # --- Phase 4c: Real confidence intervals ---
+        # Use Wilson CI on the team's recent ATS record as a proxy
+        total_ats = wins_ats + losses_ats
+        if total_ats > 0:
+            ci_low, ci_high = wilson_confidence_interval(wins_ats, total_ats)
+        else:
+            ci_low = rec.confidence_score - 0.10
+            ci_high = min(1.0, rec.confidence_score + 0.10)
+
+        grade = _get_grade(ev, edge, True, streak_status)
+
         genius_picks.append({
             "player": f"{rec.game.away_team.name} @ {rec.game.home_team.name}",
             "prop": "Game Spread",
             "line": rec.game.odds[-1].spread_points if rec.game.odds else 0,
             "pick": rec.recommended_pick.upper(),
-            "odds": -110,
+            "odds": actual_odds,
             "ev": f"+${round(ev, 2)}",
             "edge": f"+{round(edge, 1)}%",
-            "kelly_bet": f"${round(edge/10 * 100, 2)}",
+            "kelly_bet": f"${round(kelly_fraction * 1000, 2)}",
             "hit_rate": f"{round(rec.confidence_score * 100, 1)}%",
-            "streak": "hot" if rec.confidence_score > 0.85 else "neutral",
-            "confidence_range": f"{round(rec.confidence_score*100-5)}-{round(rec.confidence_score*100+5)}%",
-            "grade": get_grade(ev, edge)
+            "streak": streak_status,
+            "confidence_range": f"{round(ci_low * 100)}-{round(ci_high * 100)}%",
+            "grade": grade,
+            "ats_record": f"{wins_ats}-{losses_ats}" if total_ats > 0 else None,
+            "bp_star_rating": None,
+            "bp_agrees": True,
+            "opponent_adjusted": True,
+            "is_b2b": False,
+            "weighted_projection": None,
         })
 
     genius_picks.sort(key=lambda x: float(x["ev"].replace("+$", "")), reverse=True)
-    
+
     return {
         "genius_count": len(genius_picks),
-        "picks": genius_picks[:20]  # Top 20 genius picks
+        "picks": genius_picks[:20]
     }

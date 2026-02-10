@@ -22,32 +22,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        // Simple session check: check if token and user info exist
-        const token = localStorage.getItem("access_token");
-        const storedUser = localStorage.getItem("user");
-
-        if (token && storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error("Failed to parse stored user", e);
-                localStorage.removeItem("access_token");
-                localStorage.removeItem("user");
-            }
+    // Fetch the real user profile from the backend
+    const fetchUserProfile = async () => {
+        try {
+            const userData = await api.fetchMe();
+            setUser(userData);
+            localStorage.setItem("user", JSON.stringify(userData));
+        } catch (e) {
+            // Token invalid or expired - clean up
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("user");
+            setUser(null);
         }
-        setLoading(false);
+    };
+
+    useEffect(() => {
+        const token = localStorage.getItem("access_token");
+        if (token) {
+            // Validate token by fetching real user data from backend
+            fetchUserProfile().finally(() => setLoading(false));
+        } else {
+            setLoading(false);
+        }
     }, []);
 
     const signIn = async (email: string, password: string) => {
         try {
             const data = await api.login(email, password);
             localStorage.setItem("access_token", data.access_token);
-            // In a real app, you'd fetch the user info after login
-            // For now, let's just set a dummy user or wait for a fetchUser endpoint
-            const dummyUser = { id: 1, email };
-            setUser(dummyUser);
-            localStorage.setItem("user", JSON.stringify(dummyUser));
+            // Fetch real user profile from /auth/me
+            await fetchUserProfile();
             return { error: null };
         } catch (error: any) {
             return { error: error.response?.data?.detail || "Login failed" };

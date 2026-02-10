@@ -41,6 +41,11 @@ export const signup = async (email: string, password: string, fullName?: string)
     return data;
 };
 
+export const fetchMe = async () => {
+    const { data } = await api.get("/auth/me");
+    return data;
+};
+
 export interface Odds {
     home_moneyline: number | null;
     away_moneyline: number | null;
@@ -50,6 +55,7 @@ export interface Odds {
     total_points: number | null;
     over_price: number | null;
     under_price: number | null;
+    timestamp: string;
 }
 
 export interface TeamStats {
@@ -66,6 +72,7 @@ export interface Team {
     name: string;
     sport: string;
     logo_url: string | null;
+    current_record?: string | null;
     stats: TeamStats[];
 }
 
@@ -84,6 +91,7 @@ export interface Game {
     home_team: Team;
     away_team: Team;
     odds: Odds[];
+    recommendations: Recommendation[];
 }
 
 export interface Recommendation {
@@ -130,5 +138,43 @@ export const generateRecommendations = async (): Promise<Recommendation[]> => {
 
 export const fetchGameTracker = async (id: string): Promise<GameTracker> => {
     const { data } = await api.get(`/games/${id}/tracker`);
+    return data;
+};
+
+export interface AdvancedProp {
+    prop_id: number;
+    player_id: number;
+    player_name: string;
+    player_position: string | null;
+    prop_type: string;
+    line: number;
+    over_odds: number;
+    under_odds: number;
+    hit_rate: number;
+    weighted_avg: number;
+    ev: number;
+    edge: number;
+    kelly_fraction: number;
+    kelly_bet_size: string;
+    streak_status: string;
+    confidence_level: string;
+    recommendation: string;
+    sample_size: number;
+    confidence_interval: { low: number; high: number };
+    grade: string;
+    bp_star_rating: number | null;
+    bp_ev: number | null;
+    bp_agrees: boolean;
+    opponent_adjusted: boolean;
+    is_b2b: boolean;
+}
+
+export interface AdvancedPropsResponse {
+    total: number;
+    props: AdvancedProp[];
+}
+
+export const fetchAdvancedProps = async (minEv: number = 0, minKelly: number = 0): Promise<AdvancedPropsResponse> => {
+    const { data } = await api.get(`/recommendations/advanced-props?min_ev=${minEv}&min_kelly=${minKelly}`);
     return data;
 };

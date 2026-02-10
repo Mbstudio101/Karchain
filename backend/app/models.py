@@ -69,6 +69,7 @@ class Game(Base):
     home_team = relationship("Team", foreign_keys=[home_team_id], back_populates="home_games")
     away_team = relationship("Team", foreign_keys=[away_team_id], back_populates="away_games")
     odds = relationship("BettingOdds", back_populates="game")
+    recommendations = relationship("Recommendation", back_populates="game")
 
 class PlayerStats(Base):
     __tablename__ = "player_stats"
@@ -101,9 +102,17 @@ class PlayerProps(Base):
     line = Column(Float)  # The over/under line (e.g., 24.5)
     over_odds = Column(Integer)  # American odds for over (e.g., -110)
     under_odds = Column(Integer)  # American odds for under (e.g., -110)
+    
+    # BettingPros Analyzer Data
+    star_rating = Column(Float, nullable=True)  # 1-5 star rating from BettingPros
+    bp_ev = Column(Float, nullable=True)  # BettingPros calculated expected value
+    performance_pct = Column(Float, nullable=True)  # Hit rate over last 15 games
+    recommended_side = Column(String, nullable=True)  # 'over' or 'under'
+    
     timestamp = Column(DateTime, default=datetime.utcnow)
     
     player = relationship("Player", back_populates="props")
+
 
 class Injury(Base):
     __tablename__ = "injuries"
@@ -152,7 +161,7 @@ class Recommendation(Base):
     reasoning = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    game = relationship("Game")
+    game = relationship("Game", back_populates="recommendations")
 
 class User(Base):
     __tablename__ = "users"
@@ -164,3 +173,86 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class TeamDefenseStats(Base):
+    """
+    Advanced defensive metrics for teams.
+    Used to adjust player props based on matchup difficulty.
+    """
+    __tablename__ = "team_defense_stats"
+
+    id = Column(Integer, primary_key=True, index=True)
+    team_id = Column(Integer, ForeignKey("teams.id"))
+    season = Column(String)
+    
+    # Defense vs Position (DvP) Rankings (1-30, 1=Best Defense)
+    # Stored as JSON or separate columns? Separate columns for easier querying.
+    pg_points_rank = Column(Integer, nullable=True)
+    sg_points_rank = Column(Integer, nullable=True)
+    sf_points_rank = Column(Integer, nullable=True)
+    pf_points_rank = Column(Integer, nullable=True)
+    c_points_rank = Column(Integer, nullable=True)
+    
+    # Allowed Stats per game
+    allowed_points = Column(Float, nullable=True)
+    allowed_rebounds = Column(Float, nullable=True)
+    allowed_assists = Column(Float, nullable=True)
+    allowed_three_pointers = Column(Float, nullable=True)
+    
+    def_rating = Column(Float, nullable=True) # Defensive Rating (Points allowed per 100 poss)
+    pace = Column(Float, nullable=True)       # Pace (Possessions per 48 min)
+    
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+    team = relationship("Team")
+
+class MLModelMetadata(Base):
+    """Metadata for trained Machine Learning models."""
+    __tablename__ = "ml_models"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String)     # e.g., "xgboost_spread_v1"
+    model_type = Column(String)     # e.g., "classifier", "regressor"
+    version = Column(String)
+    accuracy = Column(Float, nullable=True)
+    mae = Column(Float, nullable=True) # Mean Absolute Error
+    filepath = Column(String)       # Path to the serialized model file
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=False)
+
+class PredictionOutcome(Base):
+    """
+    Tracks the actual result of predictions/recommendations.
+    Used for model performance monitoring and self-improvement.
+    """
+    __tablename__ = "prediction_outcomes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    recommendation_id = Column(Integer, ForeignKey("recommendations.id"))
+    game_id = Column(Integer, ForeignKey("games.id"))
+    
+    # Prediction details
+    predicted_pick = Column(String)  # e.g., "MIA Heat -9.5"
+    predicted_confidence = Column(Float)
+    bet_type = Column(String)  # 'spread', 'total', 'moneyline', 'prop'
+    
+    # Actual result
+    actual_result = Column(String)  # 'win', 'loss', 'push', 'pending'
+    actual_score_home = Column(Integer, nullable=True)
+    actual_score_away = Column(Integer, nullable=True)
+    
+    # Model tracking
+    model_used = Column(String, nullable=True)  # 'xgboost', 'pythagorean', 'heuristic'
+    feature_snapshot = Column(String, nullable=True)  # JSON of features used
+    
+    # Performance metrics
+    profit_loss = Column(Float, default=0.0)  # Profit/loss amount (positive for win)
+    odds_at_bet = Column(Integer, nullable=True)  # American odds when bet was placed
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    recommendation = relationship("Recommendation")
+    game = relationship("Game")

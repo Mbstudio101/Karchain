@@ -5,7 +5,12 @@ export const useGames = () => {
     return useQuery<Game[]>({
         queryKey: ["games"],
         queryFn: fetchGames,
-        refetchInterval: 30000, // Refresh every 30s
+        refetchInterval: (query) => {
+            // If any game is Live, refresh every 15s for real-time scores
+            const games = query.state.data as Game[] | undefined;
+            const hasLive = games?.some(g => g.status === "Live");
+            return hasLive ? 15000 : 30000;
+        },
     });
 };
 
@@ -13,6 +18,7 @@ export const useRecommendations = () => {
     return useQuery<Recommendation[]>({
         queryKey: ["recommendations"],
         queryFn: fetchRecommendations,
+        refetchInterval: 30000,
     });
 };
 

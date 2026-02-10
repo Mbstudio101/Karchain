@@ -1,7 +1,8 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api";
-import { History as HistoryIcon, TrendingUp, TrendingDown, Clock } from "lucide-react";
+import { History as HistoryIcon, TrendingUp, TrendingDown, Clock, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Recommendation {
@@ -20,6 +21,7 @@ const fetchBetHistory = async (): Promise<Recommendation[]> => {
 };
 
 export const History: React.FC = () => {
+    const navigate = useNavigate();
     const { data: bets, isLoading } = useQuery({
         queryKey: ["betHistory"],
         queryFn: fetchBetHistory
@@ -71,12 +73,13 @@ export const History: React.FC = () => {
                             <th className="p-4 font-medium">Pick</th>
                             <th className="p-4 font-medium">Confidence</th>
                             <th className="p-4 font-medium">Reasoning</th>
+                            <th className="p-4 font-medium w-10"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                         {bets?.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="p-8 text-center text-muted">
+                                <td colSpan={6} className="p-8 text-center text-muted">
                                     No recommendations yet. Go to Dashboard and click "Scan Market" to generate picks.
                                 </td>
                             </tr>
@@ -87,7 +90,8 @@ export const History: React.FC = () => {
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.03 }}
-                                className="hover:bg-white/5 transition-colors"
+                                onClick={() => navigate(`/games/${bet.game_id}`)}
+                                className="hover:bg-white/5 transition-colors cursor-pointer"
                             >
                                 <td className="p-4 text-sm text-muted">
                                     <div className="flex items-center gap-2">
@@ -115,6 +119,9 @@ export const History: React.FC = () => {
                                 </td>
                                 <td className="p-4 text-xs text-muted max-w-xs truncate">
                                     {bet.reasoning || "Automated analysis"}
+                                </td>
+                                <td className="p-4">
+                                    <ExternalLink size={12} className="text-muted" />
                                 </td>
                             </motion.tr>
                         ))}

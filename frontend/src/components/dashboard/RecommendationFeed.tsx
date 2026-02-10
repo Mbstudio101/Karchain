@@ -1,9 +1,10 @@
 import React from "react";
 import { useRecommendations, useGenerateRecommendations } from "../../hooks/useGames";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw, Brain, Activity } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Recommendation } from "../../api";
+import { cn } from "../../lib/utils";
 
 export const RecommendationFeed: React.FC = () => {
     const { data: recs } = useRecommendations();
@@ -51,33 +52,55 @@ export const RecommendationFeed: React.FC = () => {
                     Top Recommendations
                 </h3>
                 <div className="space-y-3">
-                    {recs?.slice(0, 2).map((rec: Recommendation, i: number) => (
+                    {recs?.slice(0, 2).map((rec: Recommendation, i: number) => {
+                        const isML = rec.reasoning.includes("ML Enhanced");
+                        const isInjury = rec.reasoning.includes("injury adjustment");
+                        const confidenceColor = rec.confidence_score > 0.75 ? "text-emerald-400" : 
+                                              rec.confidence_score > 0.60 ? "text-yellow-400" : "text-muted";
+                        
+                        return (
                         <motion.div
                             key={rec.id}
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.1 }}
                             onClick={() => navigate(`/games/${rec.game_id}`)}
-                            className="flex items-center justify-between bg-white/5 hover:bg-white/10 p-4 rounded-xl border-l-2 border-primary transition-colors cursor-pointer group/item"
+                            className="flex items-center justify-between bg-white/5 hover:bg-white/10 p-4 rounded-xl border-l-2 border-primary transition-colors cursor-pointer group/item relative"
                         >
                             <div className="flex items-center gap-4">
-                                <div className="bg-primary/10 text-primary p-2 rounded-lg">
-                                    <Sparkles size={16} />
+                                <div className={cn("p-2 rounded-lg", isML ? "bg-purple-500/20 text-purple-400" : "bg-primary/10 text-primary")}>
+                                    {isML ? <Brain size={16} /> : <Sparkles size={16} />}
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs text-primary font-bold uppercase bg-primary/10 px-1.5 py-0.5 rounded">{rec.bet_type}</span>
                                         <span className="text-sm font-medium text-white">{rec.recommended_pick}</span>
+                                        {isInjury && (
+                                            <div className="flex items-center gap-1 text-[10px] text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded border border-orange-400/20" title="Adjusted for significant injuries">
+                                                <Activity size={10} />
+                                                <span>Injuries</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <span className="text-xs text-muted mt-1 block max-w-sm truncate">{rec.reasoning}</span>
+                                    <div className="group/tooltip relative">
+                                        <span className="text-xs text-muted mt-1 block max-w-sm truncate group-hover/tooltip:text-white transition-colors">
+                                            {rec.reasoning}
+                                        </span>
+                                        {/* Tooltip for full reasoning */}
+                                        <div className="absolute left-0 -bottom-2 translate-y-full opacity-0 group-hover/tooltip:opacity-100 pointer-events-none bg-black/90 border border-white/10 p-2 rounded-lg text-xs text-gray-300 w-64 z-50 shadow-xl transition-opacity">
+                                            {rec.reasoning}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <span className="text-xs text-muted block">Confidence</span>
-                                <span className="text-xl font-bold text-white tracking-tight">{(rec.confidence_score * 100).toFixed(0)}%</span>
+                                <span className={cn("text-xl font-bold tracking-tight", confidenceColor)}>
+                                    {(rec.confidence_score * 100).toFixed(0)}%
+                                </span>
                             </div>
                         </motion.div>
-                    ))}
+                    )})}
                     {!recs?.length && (
                         <div className="text-muted text-sm italic flex flex-col items-center justify-center h-24 text-center">
                             <span>No recommendations generated yet.</span>

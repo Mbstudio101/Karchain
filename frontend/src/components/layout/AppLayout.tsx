@@ -1,7 +1,8 @@
-import React from "react";
-import { LayoutDashboard, Target, History, Settings, Users, Search, Layers, Brain } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { LayoutDashboard, Target, History, Settings, Users, Search, Layers, Brain, TrendingUp } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Link, useLocation, Outlet } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 interface AppLayoutProps {
     children?: React.ReactNode;
@@ -26,7 +27,39 @@ const SidebarItem = ({ icon: Icon, label, path }: { icon: any, label: string, pa
     );
 };
 
+const formatTimeAgo = (date: Date): string => {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 10) return "Just now";
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    return `${Math.floor(minutes / 60)}h ago`;
+};
+
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+    const { user } = useAuth();
+    const [lastUpdated, setLastUpdated] = useState(new Date());
+    const [timeAgo, setTimeAgo] = useState("Just now");
+
+    // Track the most recent data fetch
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTimeAgo(formatTimeAgo(lastUpdated));
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [lastUpdated]);
+
+    // Listen for React Query refetch events (games refresh every 30s)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setLastUpdated(new Date());
+        }, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const displayName = user?.full_name || user?.email?.split('@')[0] || "User";
+    const initials = displayName.slice(0, 2).toUpperCase();
+
     return (
         <div className="flex h-screen w-full bg-background overflow-hidden font-sans text-foreground selection:bg-primary/30">
             {/* Sidebar */}
@@ -46,6 +79,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     <SidebarItem icon={Search} label="Props Finder" path="/props-finder" />
                     <SidebarItem icon={Layers} label="AI Parlay" path="/mixed-parlay" />
                     <SidebarItem icon={Brain} label="Genius Picks" path="/genius-picks" />
+                    <SidebarItem icon={TrendingUp} label="Self Improvement" path="/self-improvement" />
                     <SidebarItem icon={Target} label="Analysis" path="/analysis" />
                     <SidebarItem icon={History} label="History" path="/history" />
                     <SidebarItem icon={Settings} label="Settings" path="/settings" />
@@ -54,17 +88,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <div className="mt-auto pt-6 border-t border-white/5">
                     <div className="flex items-center gap-3 px-2 mb-4">
                         <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center border border-secondary/30">
-                            <span className="text-xs font-bold text-secondary">MV</span>
+                            <span className="text-xs font-bold text-secondary">{initials}</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-medium">Marvens</span>
+                            <span className="text-sm font-medium">{displayName}</span>
                             <span className="text-xs text-muted">Pro Plan</span>
                         </div>
                     </div>
 
                     <div className="px-2 py-2 bg-white/5 rounded-lg flex items-center justify-between text-[10px] text-muted">
                         <span>Data Updated:</span>
-                        <span className="text-emerald-400 font-mono">Just now</span>
+                        <span className="text-emerald-400 font-mono">{timeAgo}</span>
                     </div>
                 </div>
             </div>

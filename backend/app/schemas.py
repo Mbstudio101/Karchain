@@ -43,6 +43,18 @@ class TeamBase(BaseModel):
     class Config:
         from_attributes = True
 
+class RecommendationBase(BaseModel):
+    id: int
+    game_id: int
+    bet_type: str
+    recommended_pick: str
+    confidence_score: float
+    reasoning: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
 # --- Game Schemas ---
 class GameBase(BaseModel):
     id: int
@@ -61,19 +73,7 @@ class GameBase(BaseModel):
     home_team: Optional[TeamBase] = None
     away_team: Optional[TeamBase] = None
     odds: List[OddsBase] = []
-
-    class Config:
-        from_attributes = True
-
-# --- Recommendation Schemas ---
-class RecommendationBase(BaseModel):
-    id: int
-    game_id: int
-    bet_type: str
-    recommended_pick: str
-    confidence_score: float
-    reasoning: str
-    timestamp: datetime
+    recommendations: List[RecommendationBase] = []
 
     class Config:
         from_attributes = True

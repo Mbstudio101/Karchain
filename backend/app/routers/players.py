@@ -86,12 +86,18 @@ def get_player_props(player_id: int, db: Session = Depends(get_db)):
 
 @router.get("/props/all", response_model=List[schemas.PlayerPropsBase])
 def get_all_props(date: date = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Get all player props. Defaults to today's games."""
-    if date is None:
-        date = get_current_gameday()
+    """Get all player props. Defaults to all active or upcoming games."""
+    query = db.query(models.PlayerProps).join(models.Game)
+    
+    if date:
+        # If a specific date is requested, filter by it
+        query = query.filter(
+            models.Game.game_date >= datetime.combine(date, datetime.min.time()),
+            models.Game.game_date <= datetime.combine(date, datetime.max.time())
+        )
+    else:
+        # Otherwise show all upcoming/active games
+        query = query.filter(models.Game.status.in_(["Scheduled", "Live"]))
         
-    props = db.query(models.PlayerProps).join(models.Game).filter(
-        models.Game.game_date >= datetime.combine(date, datetime.min.time()),
-        models.Game.game_date <= datetime.combine(date, datetime.max.time())
-    ).offset(skip).limit(limit).all()
+    props = query.order_by(models.PlayerProps.timestamp.desc()).offset(skip).limit(limit).all()
     return props

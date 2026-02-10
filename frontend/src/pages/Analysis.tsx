@@ -31,13 +31,44 @@ const fetchAnalytics = async (): Promise<AnalyticsData> => {
         propTypeCounts[p.prop_type] = (propTypeCounts[p.prop_type] || 0) + 1;
     });
 
-    // Estimate value bets (10% with edge based on default assumption)
-    const valueBets = Math.floor(propsData.length * 0.15);
+    // Calculate real value bets and average edge from props odds
+    let valueBetsCount = 0;
+    let totalEdge = 0;
+    let validPropsCount = 0;
+
+    propsData.forEach((p: any) => {
+        // Calculate implied probability and edge for over/under
+        if (p.over_odds && p.over_odds !== 0) {
+            const impliedProb = p.over_odds > 0
+                ? 100 / (p.over_odds + 100)
+                : Math.abs(p.over_odds) / (Math.abs(p.over_odds) + 100);
+            // Assume 50% true probability, calculate edge
+            const edge = (0.5 - impliedProb) * 100;
+            if (edge > 3) {
+                valueBetsCount++;
+                totalEdge += edge;
+                validPropsCount++;
+            }
+        }
+        if (p.under_odds && p.under_odds !== 0) {
+            const impliedProb = p.under_odds > 0
+                ? 100 / (p.under_odds + 100)
+                : Math.abs(p.under_odds) / (Math.abs(p.under_odds) + 100);
+            const edge = (0.5 - impliedProb) * 100;
+            if (edge > 3) {
+                valueBetsCount++;
+                totalEdge += edge;
+                validPropsCount++;
+            }
+        }
+    });
+
+    const avgEdge = validPropsCount > 0 ? totalEdge / validPropsCount : 0;
 
     return {
         totalProps: propsData.length,
-        valueBets,
-        avgEdge: 5.2, // Will be calculated from real stats
+        valueBets: valueBetsCount,
+        avgEdge: parseFloat(avgEdge.toFixed(1)),
         totalPlayers: playersData.length,
         totalGames: gamesData.length,
         propsBreakdown: Object.entries(propTypeCounts).map(([type, count]) => ({ type, count }))
@@ -136,9 +167,9 @@ export const Analysis: React.FC = () => {
                         <h3 className="font-bold text-white">Props by Type</h3>
                     </div>
 
-                    <div className="h-[250px] flex items-center justify-center">
+                    <div className="h-[250px] min-h-[200px] flex items-center justify-center">
                         {analytics?.propsBreakdown && analytics.propsBreakdown.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={250} minHeight={200}>
                                 <RechartsPie>
                                     <Pie
                                         data={analytics.propsBreakdown}

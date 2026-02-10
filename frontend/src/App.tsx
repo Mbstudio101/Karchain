@@ -11,6 +11,7 @@ import { GameDetails } from "./pages/GameDetails";
 import { Settings } from "./pages/Settings";
 import { MixedParlay } from "./pages/MixedParlay";
 import { GeniusPicksPage } from "./pages/GeniusPicks";
+import { SelfImprovement } from "./pages/SelfImprovement";
 import { Login } from "./pages/auth/Login";
 import { SignUp } from "./pages/auth/SignUp";
 import { AuthProvider } from "./context/AuthContext";
@@ -36,6 +37,7 @@ function App() {
                 <Route path="players" element={<Players />} />
                 <Route path="props-finder" element={<PropsFinder />} />
                 <Route path="analysis" element={<Analysis />} />
+                <Route path="self-improvement" element={<SelfImprovement />} />
                 <Route path="history" element={<History />} />
                 <Route path="games/:id" element={<GameDetails />} />
                 <Route path="settings" element={<Settings />} />

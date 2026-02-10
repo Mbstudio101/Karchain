@@ -11,3 +11,6 @@ beautifulsoup4
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart
+xgboost
+scikit-learn
+apscheduler

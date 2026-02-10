@@ -164,48 +164,68 @@ def _sync_player_boxscore(db: Session, game: Game, espn_event_id: str):
     boxscore = summary_data.get("boxscore", {})
     players_data = boxscore.get("players", [])
     
-    for team_data in players_data:
-        # team_id_espn = team_data.get("team", {}).get("id")
+    for team_idx, team_data in enumerate(players_data):
+        espn_team_name = team_data.get("team", {}).get("displayName", "")
         statistics = team_data.get("statistics", [])
         if not statistics: continue
-        
+
+        # Determine which DB team this ESPN team corresponds to
+        # ESPN boxscore lists away team first (index 0), home team second (index 1)
+        if team_idx == 0:
+            team_id = game.away_team_id
+            opponent_id = game.home_team_id
+        else:
+            team_id = game.home_team_id
+            opponent_id = game.away_team_id
+
+        opponent_team = db.query(Team).get(opponent_id)
+        opponent_name = opponent_team.name if opponent_team else "Unknown"
+
         # Usually the first statistics entry contains the 'athletes' list
         athletes = statistics[0].get("athletes", [])
         for athlete_entry in athletes:
             athlete = athlete_entry.get("athlete", {})
             name = athlete.get("displayName")
-            espn_player_id = athlete.get("id")
-            
+            if not name: continue
+
             # Find or create player
             db_player = db.query(Player).filter(Player.name == name).first()
             if not db_player:
-                # We'll need a way to assign the correct team if we create them
-                # For now, we use the game teams
-                is_home = name in [a.get("athlete", {}).get("displayName") for a in athletes] # simplified check
-                # Note: This is an approximation. In a real app we'd map ESPN team IDs.
-                continue 
+                position = athlete.get("position", {}).get("abbreviation") if isinstance(athlete.get("position"), dict) else None
+                db_player = Player(
+                    name=name,
+                    sport="NBA",
+                    position=position,
+                    team_id=team_id,
+                    active_status=True
+                )
+                db.add(db_player)
+                db.flush()
+                logger.info(f"Created new player: {name} (team_id={team_id})")
 
             # Parse stats
             stats_values = athlete_entry.get("stats", [])
             # ESPN NBA Boxscore stats order is usually:
             # MIN, FG, 3PT, FT, OREB, DREB, REB, AST, STL, BLK, TO, PF, +/-, PTS
-            if len(stats_values) < 14: continue
-            
+            if len(stats_values) < 14:
+                logger.warning(f"Incomplete stats for {name} in game {game.id}: only {len(stats_values)} values")
+                continue
+
             # Find or update stat entry for this game
             stat_entry = db.query(PlayerStats).filter(
                 PlayerStats.player_id == db_player.id,
                 PlayerStats.game_id == game.id
             ).first()
-            
+
             if not stat_entry:
                 stat_entry = PlayerStats(
                     player_id=db_player.id,
                     game_id=game.id,
                     game_date=game.game_date.date(),
-                    opponent=db.query(Team).get(game.away_team_id if game.home_team_id == db_player.team_id else game.home_team_id).name
+                    opponent=opponent_name
                 )
                 db.add(stat_entry)
-            
+
             try:
                 stat_entry.minutes_played = float(stats_values[0]) if stats_values[0] != "--" else 0
                 stat_entry.rebounds = float(stats_values[6]) if stats_values[6] != "--" else 0
@@ -213,8 +233,8 @@ def _sync_player_boxscore(db: Session, game: Game, espn_event_id: str):
                 stat_entry.steals = float(stats_values[8]) if stats_values[8] != "--" else 0
                 stat_entry.blocks = float(stats_values[9]) if stats_values[9] != "--" else 0
                 stat_entry.points = float(stats_values[13]) if stats_values[13] != "--" else 0
-            except:
-                pass
+            except Exception as e:
+                logger.error(f"Error parsing stats for {name} in game {game.id}: {e}")
 
     db.flush()
 

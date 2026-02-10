@@ -66,7 +66,7 @@ const calculateHitRate = (stats: PlayerStats[], propType: string, line: number):
 };
 
 // Flip Card Component
-const PlayerFlipCard: React.FC<{ player: Player; index: number }> = ({ player, index }) => {
+const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: Record<string, 'over' | 'under'>; onTogglePick: (key: string, side: 'over' | 'under') => void }> = ({ player, index, selectedPicks, onTogglePick }) => {
     const [isFlipped, setIsFlipped] = useState(false);
 
     const { data: props } = useQuery({
@@ -234,14 +234,32 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number }> = ({ player, i
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-1.5">
-                                            <div className={`rounded py-1.5 text-center ${hitRate > 50 ? 'bg-emerald-500/20 border border-emerald-500/30' : 'bg-white/5 border border-white/10'}`}>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onTogglePick(`${player.id}-${prop.id}`, 'over'); }}
+                                                className={`rounded py-1.5 text-center transition-colors ${
+                                                    selectedPicks[`${player.id}-${prop.id}`] === 'over'
+                                                        ? 'bg-emerald-500/40 border-2 border-emerald-400'
+                                                        : hitRate > 50
+                                                            ? 'bg-emerald-500/20 border border-emerald-500/30'
+                                                            : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
                                                 <div className="text-[9px] text-muted">Over</div>
-                                                <div className={`text-xs font-bold ${hitRate > 50 ? 'text-emerald-400' : 'text-white'}`}>{formatOdds(prop.over_odds)}</div>
-                                            </div>
-                                            <div className={`rounded py-1.5 text-center ${hitRate <= 50 ? 'bg-red-500/20 border border-red-500/30' : 'bg-white/5 border border-white/10'}`}>
+                                                <div className={`text-xs font-bold ${selectedPicks[`${player.id}-${prop.id}`] === 'over' || hitRate > 50 ? 'text-emerald-400' : 'text-white'}`}>{formatOdds(prop.over_odds)}</div>
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onTogglePick(`${player.id}-${prop.id}`, 'under'); }}
+                                                className={`rounded py-1.5 text-center transition-colors ${
+                                                    selectedPicks[`${player.id}-${prop.id}`] === 'under'
+                                                        ? 'bg-red-500/40 border-2 border-red-400'
+                                                        : hitRate <= 50
+                                                            ? 'bg-red-500/20 border border-red-500/30'
+                                                            : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                                                }`}
+                                            >
                                                 <div className="text-[9px] text-muted">Under</div>
-                                                <div className={`text-xs font-bold ${hitRate <= 50 ? 'text-red-400' : 'text-white'}`}>{formatOdds(prop.under_odds)}</div>
-                                            </div>
+                                                <div className={`text-xs font-bold ${selectedPicks[`${player.id}-${prop.id}`] === 'under' || hitRate <= 50 ? 'text-red-400' : 'text-white'}`}>{formatOdds(prop.under_odds)}</div>
+                                            </button>
                                         </div>
                                     </div>
                                 );
@@ -268,10 +286,21 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number }> = ({ player, i
 
 export const Players: React.FC = () => {
     const [search, setSearch] = useState("");
+    const [selectedPicks, setSelectedPicks] = useState<Record<string, 'over' | 'under'>>({});
     const { data: players, isLoading } = useQuery({
         queryKey: ["players"],
         queryFn: fetchPlayers
     });
+
+    const togglePick = (key: string, side: 'over' | 'under') => {
+        setSelectedPicks(prev => {
+            if (prev[key] === side) {
+                const { [key]: _, ...rest } = prev;
+                return rest;
+            }
+            return { ...prev, [key]: side };
+        });
+    };
 
     const filtered = players?.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
@@ -309,7 +338,7 @@ export const Players: React.FC = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filtered?.map((player, i) => (
-                        <PlayerFlipCard key={player.id} player={player} index={i} />
+                        <PlayerFlipCard key={player.id} player={player} index={i} selectedPicks={selectedPicks} onTogglePick={togglePick} />
                     ))}
                 </div>
             )}

@@ -52,6 +52,7 @@ def kelly_criterion(probability: float, odds: int) -> float:
         return 0.0
     
     # Convert American odds to decimal
+    if odds == 0: return 0.0 # Guard against invalid odds
     if odds > 0:
         decimal = 1 + (odds / 100)
     else:
@@ -99,6 +100,7 @@ def calculate_ev(probability: float, odds: int, stake: float = 100) -> float:
         Expected value (+/- amount per bet)
     """
     # Calculate potential profit
+    if odds == 0: return 0.0
     if odds > 0:
         profit = stake * (odds / 100)
     else:
@@ -216,7 +218,7 @@ def recency_hit_rate(line: float, stats: List[float], decay: float = 0.85) -> fl
 def opponent_adjusted_projection(
     player_avg: float,
     opponent_defense_rating: float,
-    league_avg_defense: float = 100.0
+    league_avg_defense: float = 112.0
 ) -> float:
     """
     Adjust player projection based on opponent defensive strength.
@@ -239,7 +241,7 @@ def opponent_adjusted_projection(
 def pace_adjusted_projection(
     player_avg: float,
     opponent_pace: float,
-    league_avg_pace: float = 100.0
+    league_avg_pace: float = 99.5
 ) -> float:
     """
     Adjust projection based on opponent's pace of play.
@@ -355,17 +357,101 @@ def sample_size_sufficient(total: int, min_samples: int = 10) -> bool:
 # COMBINED ANALYSIS
 # =============================================================================
 
+def minutes_adjusted_projection(
+    player_avg: float,
+    recent_minutes: List[float],
+    season_avg_minutes: float
+) -> Tuple[float, float]:
+    """
+    Adjust projection based on recent minutes trends.
+
+    Returns:
+        (adjusted_projection, minutes_trend_pct)
+        minutes_trend_pct > 0 means minutes trending up
+    """
+    if not recent_minutes or season_avg_minutes <= 0:
+        return player_avg, 0.0
+
+    recent_avg = sum(recent_minutes[-5:]) / min(5, len(recent_minutes))
+    minutes_factor = recent_avg / season_avg_minutes
+    trend_pct = (minutes_factor - 1.0) * 100
+
+    return player_avg * minutes_factor, trend_pct
+
+
+def composite_confidence_score(
+    our_hit_rate: float,
+    recency_hit_rate_val: float,
+    bp_star_rating: Optional[float] = None,
+    bp_ev: Optional[float] = None,
+    bp_recommended_side: Optional[str] = None,
+    our_recommendation: Optional[str] = None
+) -> Tuple[float, bool]:
+    """
+    Blend our stats with BettingPros intelligence data.
+
+    Weights:
+      - Our statistical hit rate: 40%
+      - BettingPros star_rating/bp_ev: 30%
+      - Recency-weighted hit rate: 30%
+
+    Returns:
+        (composite_score 0-1, bp_agrees: bool)
+    """
+    # Our stats component (40%)
+    our_component = our_hit_rate * 0.40
+
+    # Recency component (30%)
+    recency_component = recency_hit_rate_val * 0.30
+
+    # BettingPros component (30%)
+    if bp_star_rating is not None and bp_ev is not None:
+        # Normalize star rating (1-5) to 0-1 scale
+        bp_confidence = min(1.0, max(0.0, (bp_star_rating - 1) / 4.0))
+        # Blend star rating confidence with EV signal
+        bp_ev_signal = 0.6 if bp_ev > 0 else 0.4
+        bp_score = (bp_confidence * 0.6 + bp_ev_signal * 0.4)
+        bp_component = bp_score * 0.30
+    else:
+        # No BP data: redistribute weight to our stats and recency
+        bp_component = 0.0
+        our_component = our_hit_rate * 0.55
+        recency_component = recency_hit_rate_val * 0.45
+
+    composite = our_component + recency_component + bp_component
+
+    # Check if BP agrees with our recommendation
+    bp_agrees = True  # Default to True if no BP data
+    if bp_recommended_side and our_recommendation:
+        bp_agrees = bp_recommended_side.lower() == our_recommendation.lower()
+
+    return min(0.95, max(0.05, composite)), bp_agrees
+
+
 def analyze_prop(
     line: float,
     historical_stats: List[float],
     odds_over: int,
     odds_under: int,
     opponent_defense_rating: Optional[float] = None,
-    league_avg_defense: float = 100.0
+    league_avg_defense: float = 112.0,
+    opponent_pace: Optional[float] = None,
+    league_avg_pace: float = 99.5,
+    recent_minutes: Optional[List[float]] = None,
+    season_avg_minutes: Optional[float] = None,
+    is_home: Optional[bool] = None,
+    home_stats: Optional[List[float]] = None,
+    away_stats: Optional[List[float]] = None,
+    is_b2b: bool = False,
+    rest_days: Optional[int] = None,
+    bp_star_rating: Optional[float] = None,
+    bp_ev: Optional[float] = None,
+    bp_performance_pct: Optional[float] = None,
+    bp_recommended_side: Optional[str] = None
 ) -> PropAnalysis:
     """
-    Perform complete analysis of a player prop.
-    
+    Perform complete analysis of a player prop with all available signals.
+
     Returns comprehensive PropAnalysis with all metrics.
     """
     if not historical_stats:
@@ -381,41 +467,94 @@ def analyze_prop(
             recommendation="insufficient_data",
             confidence=BetConfidence.AVOID
         )
-    
+
     # Basic hit rate
     hits = sum(1 for s in historical_stats if s > line)
     total = len(historical_stats)
     basic_hit_rate = hits / total if total > 0 else 0.5
-    
+
     # Confidence interval
     ci = wilson_confidence_interval(hits, total)
-    
+
     # Weighted hit rate (recency)
     weighted_hit = recency_hit_rate(line, historical_stats)
-    
+
     # Streak detection
     streak = detect_streak(historical_stats)
     streak_mod = streak_modifier(streak)
-    
+
     # Apply streak modifier
     adjusted_hit_rate = min(0.95, max(0.05, weighted_hit * streak_mod))
-    
-    # Opponent adjustment if available
+
+    # --- Opponent Defense Adjustment ---
     weighted_avg = weighted_average(historical_stats)
-    if opponent_defense_rating:
+    adjusted_projection = weighted_avg
+
+    if opponent_defense_rating is not None:
         adjusted_projection = opponent_adjusted_projection(
-            weighted_avg, opponent_defense_rating, league_avg_defense
+            adjusted_projection, opponent_defense_rating, league_avg_defense
         )
-        # Re-estimate hit rate based on adjusted projection
-        if adjusted_projection > line:
-            adjusted_hit_rate = min(adjusted_hit_rate * 1.05, 0.95)
-        else:
-            adjusted_hit_rate = max(adjusted_hit_rate * 0.95, 0.05)
-    
+
+    # --- Pace Adjustment ---
+    if opponent_pace is not None:
+        adjusted_projection = pace_adjusted_projection(
+            adjusted_projection, opponent_pace, league_avg_pace
+        )
+
+    # --- Minutes Adjustment ---
+    minutes_trend = 0.0
+    if recent_minutes and season_avg_minutes and season_avg_minutes > 0:
+        adjusted_projection, minutes_trend = minutes_adjusted_projection(
+            adjusted_projection, recent_minutes, season_avg_minutes
+        )
+
+    # --- Home/Away Split ---
+    if is_home is not None:
+        split_stats = home_stats if is_home else away_stats
+        if split_stats and len(split_stats) >= 3:
+            split_avg = sum(split_stats) / len(split_stats)
+            # Blend split with overall: 40% split, 60% overall
+            adjusted_projection = adjusted_projection * 0.6 + split_avg * 0.4
+
+    # --- Rest/B2B Adjustment ---
+    if is_b2b:
+        adjusted_projection *= 0.92  # ~8% reduction on B2B
+    elif rest_days is not None and rest_days >= 3:
+        adjusted_projection *= 1.02  # Slight boost for extra rest
+
+    # Re-estimate hit rate based on adjusted projection vs line
+    projection_delta = (adjusted_projection - line) / max(abs(line), 1.0)
+    if projection_delta > 0:
+        # Projection above line → boost over hit rate
+        boost = min(projection_delta * 0.3, 0.15)  # Cap at 15% boost
+        adjusted_hit_rate = min(0.95, adjusted_hit_rate + boost)
+    else:
+        # Projection below line → reduce over hit rate
+        penalty = min(abs(projection_delta) * 0.3, 0.15)
+        adjusted_hit_rate = max(0.05, adjusted_hit_rate - penalty)
+
+    # --- BettingPros Composite Confidence ---
+    recency_rate = recency_hit_rate(line, historical_stats)
+
+    # Determine preliminary recommendation for BP agreement check
+    prelim_rec = "over" if adjusted_hit_rate > 0.5 else "under"
+
+    composite, bp_agrees = composite_confidence_score(
+        our_hit_rate=adjusted_hit_rate,
+        recency_hit_rate_val=recency_rate,
+        bp_star_rating=bp_star_rating,
+        bp_ev=bp_ev,
+        bp_recommended_side=bp_recommended_side,
+        our_recommendation=prelim_rec
+    )
+
+    # Use composite as the final adjusted hit rate
+    adjusted_hit_rate = composite
+
     # Calculate EV for both sides
     ev_over = calculate_ev(adjusted_hit_rate, odds_over)
     ev_under = calculate_ev(1 - adjusted_hit_rate, odds_under)
-    
+
     # Determine best side
     if ev_over > ev_under and ev_over > 0:
         best_ev = ev_over
@@ -432,24 +571,26 @@ def analyze_prop(
         best_odds = odds_over if ev_over > ev_under else odds_under
         best_prob = adjusted_hit_rate if ev_over > ev_under else 1 - adjusted_hit_rate
         recommendation = "avoid"
-    
+
     # Kelly fraction
     kelly = kelly_criterion(best_prob, best_odds)
-    
+
     # Edge calculation
     implied_prob = 100 / (100 + abs(best_odds)) if best_odds < 0 else 100 / (100 + best_odds)
     edge = (best_prob - implied_prob) * 100
-    
-    # Confidence level
-    if best_ev > 5 and sample_size_sufficient(total, 15):
+
+    # Confidence level — enhanced with BP agreement and sample size
+    if best_ev > 5 and sample_size_sufficient(total, 15) and bp_agrees:
         confidence = BetConfidence.HIGH
+    elif best_ev > 3 and sample_size_sufficient(total, 10):
+        confidence = BetConfidence.HIGH if bp_agrees else BetConfidence.MEDIUM
     elif best_ev > 0 and sample_size_sufficient(total, 10):
         confidence = BetConfidence.MEDIUM
     elif best_ev > 0:
         confidence = BetConfidence.LOW
     else:
         confidence = BetConfidence.AVOID
-    
+
     return PropAnalysis(
         hit_rate=basic_hit_rate,
         confidence_interval=ci,
@@ -458,7 +599,7 @@ def analyze_prop(
         ev=best_ev,
         kelly_fraction=kelly,
         streak_status=streak,
-        weighted_average=weighted_avg,
+        weighted_average=adjusted_projection,
         recommendation=recommendation,
         confidence=confidence
     )
