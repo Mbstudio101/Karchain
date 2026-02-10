@@ -1,0 +1,12 @@
+{
+  "page_findings": {
+    "page": "Players Catch Shoot",
+    "url": "https://www.nba.com/stats/players/catch-shoot",
+    "missing_endpoint": "leaguedashplayercatchshoot",
+    "status": "ERROR",
+    "error": "name 'script_data_clues' is not defined",
+    "endpoints_found": [],
+    "timestamp": "2026-02-10T10:05:26.234623"
+  },
+  "timestamp": "2026-02-10T10:05:26.234652"
+}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, TrendingUp, TrendingDown, Award, Target, Zap, BarChart3, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '../../api';
 
 interface ModelPerformance {
   win_rate: number;
@@ -72,8 +73,7 @@ export const SelfImprovementDashboard: React.FC = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      const response = await fetch('http://localhost:8000/self-improvement/dashboard-stats');
-      const data = await response.json();
+      const { data } = await api.get('/self-improvement/dashboard-stats');
       setDashboardStats(data);
     } catch (error) {
       console.error('Failed to fetch dashboard stats:', error);
@@ -84,8 +84,7 @@ export const SelfImprovementDashboard: React.FC = () => {
 
   const fetchGeniusPicks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/self-improvement/genius-picks?days_back=30&min_confidence=0.8');
-      const data = await response.json();
+      const { data } = await api.get('/self-improvement/genius-picks?days_back=30&min_confidence=0.8');
       setGeniusPicks(data.picks || []);
     } catch (error) {
       console.error('Failed to fetch genius picks:', error);
@@ -95,7 +94,7 @@ export const SelfImprovementDashboard: React.FC = () => {
   const runAnalysis = async () => {
     setIsAnalyzing(true);
     try {
-      await fetch('http://localhost:8000/self-improvement/run-analysis', { method: 'POST' });
+      await api.post('/self-improvement/run-analysis');
       // Refresh data after analysis
       setTimeout(() => {
         fetchDashboardStats();
@@ -110,7 +109,7 @@ export const SelfImprovementDashboard: React.FC = () => {
 
   const retrainModel = async (modelName: string) => {
     try {
-      await fetch(`http://localhost:8000/self-improvement/retrain-model/${modelName}`, { method: 'POST' });
+      await api.post(`/self-improvement/retrain-model/${modelName}`);
       alert(`Model retraining started for ${modelName}`);
     } catch (error) {
       console.error('Failed to retrain model:', error);

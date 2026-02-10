@@ -1,0 +1,12 @@
+{
+  "page_findings": {
+    "page": "Players Opponent Shooting",
+    "url": "https://www.nba.com/stats/players/opponent-shooting",
+    "missing_endpoint": "leaguedashplayeropponent",
+    "status": "ERROR",
+    "error": "name 'script_data_clues' is not defined",
+    "endpoints_found": [],
+    "timestamp": "2026-02-10T10:05:30.722592"
+  },
+  "timestamp": "2026-02-10T10:05:30.722625"
+}

@@ -1,27 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api";
+import { fetchMixedParlay } from "../api";
 import { Layers, RefreshCw, Trophy, TrendingUp, Zap, Target, Brain } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface ParlayLeg {
-    game_id: number;
-    pick: string;
-    odds: number;
-    confidence: number;
-}
-
-interface ParlayResponse {
-    legs: ParlayLeg[];
-    combined_odds: number;
-    potential_payout: number;
-    confidence_score: number;
-}
-
-const fetchMixedParlay = async (legs: number): Promise<ParlayResponse> => {
-    const { data } = await api.post<ParlayResponse>(`/recommendations/generate-mixed-parlay?legs=${legs}`);
-    return data;
-};
 
 const getBetType = (pick: string): 'prop' | 'spread' | 'moneyline' => {
     if (pick.includes('OVER') || pick.includes('UNDER')) return 'prop';

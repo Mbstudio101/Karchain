@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-02-10T10:25:04.497813",
+  "strategy": "nuclear_warfare",
+  "stealth_endpoints": {
+    "leaguedashplayerclutch": {
+      "status": "exception",
+      "error": "[Errno 13] Permission denied: '/Users/marvens/Desktop/Karchain/.venv/lib/python3.10/site-packages/undetected_playwright/driver/playwright.sh'",
+      "endpoint": "leaguedashplayerclutch"
+    },
+    "leaguedashplayershotlocations": {
+      "status": "exception",
+      "error": "[Errno 13] Permission denied: '/Users/marvens/Desktop/Karchain/.venv/lib/python3.10/site-packages/undetected_playwright/driver/playwright.sh'",
+      "endpoint": "leaguedashplayershotlocations"
+    },
+    "leaguedashplayertracking": {
+      "status": "exception",
+      "error": "[Errno 13] Permission denied: '/Users/marvens/Desktop/Karchain/.venv/lib/python3.10/site-packages/undetected_playwright/driver/playwright.sh'",
+      "endpoint": "leaguedashplayertracking"
+    }
+  },
+  "graphql_endpoints": {
+    "https://public-api.nbatopshot.com/graphql": {
+      "status": "success",
+      "data": {
+        "errors": [
+          {
+            "message": "introspection disabled",
+            "path": [
+              "__schema"
+            ]
+          }
+        ],
+        "data": {
+          "__schema": null
+        }
+      }
+    },
+    "https://stats.nba.com/graphql": {
+      "status": "http_404"
+    },
+    "https://api.nba.com/graphql": {
+      "status": "http_401"
+    }
+  },
+  "mobile_endpoints": [],
+  "javascript_endpoints": {
+    "status": "error",
+    "error": "[Errno 13] Permission denied: '/Users/marvens/Desktop/Karchain/.venv/lib/python3.10/site-packages/undetected_playwright/driver/playwright.sh'"
+  },
+  "summary": {
+    "total_tested": 8,
+    "working_stealth": 0,
+    "failed_stealth": 3,
+    "working_endpoints": [],
+    "failed_endpoints": [
+      "leaguedashplayerclutch",
+      "leaguedashplayershotlocations",
+      "leaguedashplayertracking"
+    ],
+    "mobile_endpoints_found": 0,
+    "graphql_endpoints_found": 1
+  }
+}

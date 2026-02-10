@@ -1,33 +1,8 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../api";
+import { fetchGeniusPicks } from "../../api";
 import { Brain, Flame, Snowflake } from "lucide-react";
 import { motion } from "framer-motion";
-
-interface GeniusPick {
-    player: string;
-    prop: string;
-    line: number;
-    pick: string;
-    odds: number;
-    ev: string;
-    edge: string;
-    kelly_bet: string;
-    hit_rate: string;
-    streak: string;
-    confidence_range: string;
-    grade: string;
-}
-
-interface GeniusPicksResponse {
-    genius_count: number;
-    picks: GeniusPick[];
-}
-
-const fetchGeniusPicks = async (): Promise<GeniusPicksResponse> => {
-    const { data } = await api.get<GeniusPicksResponse>("/recommendations/genius-picks");
-    return data;
-};
 
 export const GeniusPicks: React.FC = () => {
     const { data, isLoading, refetch } = useQuery({
@@ -43,8 +18,11 @@ export const GeniusPicks: React.FC = () => {
     };
 
     const getGradeColor = (grade: string) => {
+        if (grade === "S") return "from-amber-300 to-red-500";
         if (grade === "A+") return "from-yellow-400 to-orange-500";
-        return "from-emerald-400 to-emerald-600";
+        if (grade === "A") return "from-emerald-400 to-emerald-600";
+        if (grade === "B+") return "from-blue-400 to-blue-600";
+        return "from-gray-400 to-gray-600";
     };
 
     if (isLoading) {

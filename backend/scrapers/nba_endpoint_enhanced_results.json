@@ -1,0 +1,206 @@
+{
+  "results": {
+    "leaguedashplayerstats": {
+      "status": "failed",
+      "description": "Traditional Player Statistics",
+      "category": "player_traditional",
+      "response_time": 61.02142596244812
+    },
+    "leaguedashplayerclutch": {
+      "status": "failed",
+      "description": "Player Clutch Statistics",
+      "category": "player_clutch",
+      "response_time": 65.92582726478577
+    },
+    "leaguedashplayershotlocations": {
+      "status": "failed",
+      "description": "Player Shot Locations",
+      "category": "player_shooting",
+      "response_time": 54.83638572692871
+    },
+    "leaguedashptdefend": {
+      "status": "success",
+      "description": "Player Defense Statistics",
+      "category": "player_defense",
+      "record_count": 569,
+      "response_time": 2.8469398021698,
+      "key_stats_found": [
+        "PLAYER_NAME"
+      ],
+      "key_stats_expected": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "DEF_RIM_FGM",
+        "DEF_RIM_FGA",
+        "DEF_RIM_FG_PCT",
+        "DREB",
+        "STL",
+        "BLK"
+      ],
+      "data_quality": "medium"
+    },
+    "leaguedashptstats": {
+      "status": "failed",
+      "description": "Player Tracking Statistics",
+      "category": "player_tracking",
+      "response_time": 79.13995099067688
+    },
+    "leaguehustlestatsplayer": {
+      "status": "success",
+      "description": "Player Hustle Statistics",
+      "category": "player_hustle",
+      "record_count": 567,
+      "response_time": 8.46207308769226,
+      "key_stats_found": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "SCREEN_ASSISTS",
+        "SCREEN_AST_PTS",
+        "LOOSE_BALLS_RECOVERED",
+        "CHARGES_DRAWN",
+        "DEFLECTIONS"
+      ],
+      "key_stats_expected": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "SCREEN_ASSISTS",
+        "SCREEN_AST_PTS",
+        "LOOSE_BALLS_RECOVERED",
+        "CHARGES_DRAWN",
+        "DEFLECTIONS"
+      ],
+      "data_quality": "high"
+    },
+    "leaguedashteamstats": {
+      "status": "failed",
+      "description": "Traditional Team Statistics",
+      "category": "team_traditional",
+      "response_time": 62.60716915130615
+    },
+    "leaguehustlestatsteam": {
+      "status": "success",
+      "description": "Team Hustle Statistics",
+      "category": "team_hustle",
+      "record_count": 30,
+      "response_time": 21.725754976272583,
+      "key_stats_found": [
+        "TEAM_NAME",
+        "SCREEN_ASSISTS",
+        "SCREEN_AST_PTS",
+        "LOOSE_BALLS_RECOVERED",
+        "CHARGES_DRAWN",
+        "DEFLECTIONS",
+        "CONTESTED_SHOTS_2PT",
+        "CONTESTED_SHOTS_3PT"
+      ],
+      "key_stats_expected": [
+        "TEAM_NAME",
+        "SCREEN_ASSISTS",
+        "SCREEN_AST_PTS",
+        "LOOSE_BALLS_RECOVERED",
+        "CHARGES_DRAWN",
+        "DEFLECTIONS",
+        "CONTESTED_SHOTS_2PT",
+        "CONTESTED_SHOTS_3PT"
+      ],
+      "data_quality": "high"
+    }
+  },
+  "summary": {
+    "total_endpoints": 8,
+    "successful_endpoints": 3,
+    "failed_endpoints": 5,
+    "high_quality_endpoints": 2,
+    "medium_quality_endpoints": 1,
+    "low_quality_endpoints": 0,
+    "total_request_count": 11,
+    "total_time": 389.66145610809326,
+    "most_reliable_endpoints": [
+      {
+        "endpoint": "leaguedashptdefend",
+        "info": {
+          "status": "success",
+          "description": "Player Defense Statistics",
+          "category": "player_defense",
+          "record_count": 569,
+          "response_time": 2.8469398021698,
+          "key_stats_found": [
+            "PLAYER_NAME"
+          ],
+          "key_stats_expected": [
+            "PLAYER_NAME",
+            "TEAM_ABBREVIATION",
+            "DEF_RIM_FGM",
+            "DEF_RIM_FGA",
+            "DEF_RIM_FG_PCT",
+            "DREB",
+            "STL",
+            "BLK"
+          ],
+          "data_quality": "medium"
+        }
+      },
+      {
+        "endpoint": "leaguehustlestatsplayer",
+        "info": {
+          "status": "success",
+          "description": "Player Hustle Statistics",
+          "category": "player_hustle",
+          "record_count": 567,
+          "response_time": 8.46207308769226,
+          "key_stats_found": [
+            "PLAYER_NAME",
+            "TEAM_ABBREVIATION",
+            "SCREEN_ASSISTS",
+            "SCREEN_AST_PTS",
+            "LOOSE_BALLS_RECOVERED",
+            "CHARGES_DRAWN",
+            "DEFLECTIONS"
+          ],
+          "key_stats_expected": [
+            "PLAYER_NAME",
+            "TEAM_ABBREVIATION",
+            "SCREEN_ASSISTS",
+            "SCREEN_AST_PTS",
+            "LOOSE_BALLS_RECOVERED",
+            "CHARGES_DRAWN",
+            "DEFLECTIONS"
+          ],
+          "data_quality": "high"
+        }
+      },
+      {
+        "endpoint": "leaguehustlestatsteam",
+        "info": {
+          "status": "success",
+          "description": "Team Hustle Statistics",
+          "category": "team_hustle",
+          "record_count": 30,
+          "response_time": 21.725754976272583,
+          "key_stats_found": [
+            "TEAM_NAME",
+            "SCREEN_ASSISTS",
+            "SCREEN_AST_PTS",
+            "LOOSE_BALLS_RECOVERED",
+            "CHARGES_DRAWN",
+            "DEFLECTIONS",
+            "CONTESTED_SHOTS_2PT",
+            "CONTESTED_SHOTS_3PT"
+          ],
+          "key_stats_expected": [
+            "TEAM_NAME",
+            "SCREEN_ASSISTS",
+            "SCREEN_AST_PTS",
+            "LOOSE_BALLS_RECOVERED",
+            "CHARGES_DRAWN",
+            "DEFLECTIONS",
+            "CONTESTED_SHOTS_2PT",
+            "CONTESTED_SHOTS_3PT"
+          ],
+          "data_quality": "high"
+        }
+      }
+    ]
+  },
+  "timestamp": "2026-02-10T09:32:55.516853"
+}

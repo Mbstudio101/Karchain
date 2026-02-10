@@ -15,15 +15,15 @@ interface AnalyticsData {
 }
 
 const fetchAnalytics = async (): Promise<AnalyticsData> => {
-    const [props, players, games] = await Promise.all([
+    const [propsRes, playersRes, gamesRes] = await Promise.allSettled([
         api.get("/players/props/all?limit=1000"),
         api.get("/players/"),
         api.get("/games/")
     ]);
 
-    const propsData = props.data || [];
-    const playersData = players.data || [];
-    const gamesData = games.data || [];
+    const propsData = propsRes.status === 'fulfilled' ? propsRes.value.data || [] : [];
+    const playersData = playersRes.status === 'fulfilled' ? playersRes.value.data || [] : [];
+    const gamesData = gamesRes.status === 'fulfilled' ? gamesRes.value.data || [] : [];
 
     // Calculate props breakdown
     const propTypeCounts: Record<string, number> = {};

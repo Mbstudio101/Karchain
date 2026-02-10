@@ -1,0 +1,100 @@
+{
+  "ultimate_reality_check_summary": {
+    "total_pages_scraped": 10,
+    "total_working_alternatives_found": 0,
+    "timestamp": "2026-02-10T10:05:42.088390"
+  },
+  "alternative_data_sources": [],
+  "detailed_findings": [
+    {
+      "page": "Players Clutch Traditional",
+      "url": "https://www.nba.com/stats/players/clutch-traditional",
+      "missing_endpoint": "leaguedashplayerclutch",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:19.274375"
+    },
+    {
+      "page": "Players Shots General",
+      "url": "https://www.nba.com/stats/players/shots-general",
+      "missing_endpoint": "leaguedashplayershotlocations",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:21.564152"
+    },
+    {
+      "page": "Players Transition",
+      "url": "https://www.nba.com/stats/players/transition",
+      "missing_endpoint": "leaguedashplayerptshot",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:23.978332"
+    },
+    {
+      "page": "Players Catch Shoot",
+      "url": "https://www.nba.com/stats/players/catch-shoot",
+      "missing_endpoint": "leaguedashplayercatchshoot",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:26.234623"
+    },
+    {
+      "page": "Players Shooting",
+      "url": "https://www.nba.com/stats/players/shooting",
+      "missing_endpoint": "leaguedashplayershotchart",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:28.483564"
+    },
+    {
+      "page": "Players Opponent Shooting",
+      "url": "https://www.nba.com/stats/players/opponent-shooting",
+      "missing_endpoint": "leaguedashplayeropponent",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:30.722592"
+    },
+    {
+      "page": "Players Box Outs",
+      "url": "https://www.nba.com/stats/players/box-outs",
+      "missing_endpoint": "leaguedashplayerrebounds",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:33.226847"
+    },
+    {
+      "page": "Teams Traditional",
+      "url": "https://www.nba.com/stats/teams/traditional",
+      "missing_endpoint": "leaguedashteamstats",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:35.505719"
+    },
+    {
+      "page": "Teams Clutch Traditional",
+      "url": "https://www.nba.com/stats/teams/clutch-traditional",
+      "missing_endpoint": "leaguedashteamclutch",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:37.776018"
+    },
+    {
+      "page": "Teams Shots General",
+      "url": "https://www.nba.com/stats/teams/shots-general",
+      "missing_endpoint": "leaguedashteamshotlocations",
+      "status": "ERROR",
+      "error": "name 'script_data_clues' is not defined",
+      "endpoints_found": [],
+      "timestamp": "2026-02-10T10:05:40.085991"
+    }
+  ]
+}

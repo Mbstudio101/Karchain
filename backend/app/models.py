@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Date
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Date, JSON, Index
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime
+
+# Import NBA official stats models
+from .models_nba_official import NBAOfficialPlayerStats, NBAOfficialTeamStats
 
 class Team(Base):
     __tablename__ = "teams"

@@ -1,0 +1,71 @@
+{
+  "endpoint": "leaguedashptdefend",
+  "timestamp": 1770730972.0161679,
+  "total_rows": 569,
+  "headers": [
+    "CLOSE_DEF_PERSON_ID",
+    "PLAYER_NAME",
+    "PLAYER_LAST_TEAM_ID",
+    "PLAYER_LAST_TEAM_ABBREVIATION",
+    "PLAYER_POSITION",
+    "AGE",
+    "GP",
+    "G",
+    "FREQ",
+    "D_FGM",
+    "D_FGA",
+    "D_FG_PCT",
+    "NORMAL_FG_PCT",
+    "PCT_PLUSMINUS"
+  ],
+  "sample_data": [
+    [
+      201572,
+      "Brook Lopez",
+      1610612749,
+      "MIL",
+      "C",
+      36.0,
+      79,
+      79,
+      1.0,
+      835,
+      1751,
+      0.477,
+      0.498,
+      -0.021
+    ],
+    [
+      203999,
+      "Nikola Joki\u0107",
+      1610612743,
+      "DEN",
+      "C",
+      29.0,
+      78,
+      78,
+      1.0,
+      796,
+      1559,
+      0.511,
+      0.505,
+      0.005
+    ],
+    [
+      203497,
+      "Rudy Gobert",
+      1610612750,
+      "MIN",
+      "C",
+      32.0,
+      76,
+      76,
+      1.0,
+      626,
+      1440,
+      0.435,
+      0.495,
+      -0.06
+    ]
+  ]
+}

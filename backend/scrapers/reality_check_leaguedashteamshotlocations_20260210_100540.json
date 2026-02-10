@@ -1,0 +1,12 @@
+{
+  "page_findings": {
+    "page": "Teams Shots General",
+    "url": "https://www.nba.com/stats/teams/shots-general",
+    "missing_endpoint": "leaguedashteamshotlocations",
+    "status": "ERROR",
+    "error": "name 'script_data_clues' is not defined",
+    "endpoints_found": [],
+    "timestamp": "2026-02-10T10:05:40.085991"
+  },
+  "timestamp": "2026-02-10T10:05:40.086014"
+}

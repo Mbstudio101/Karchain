@@ -8,8 +8,9 @@ from typing import Dict, List, Optional
 import json
 import logging
 
-from ..models import Recommendation, Game, PredictionOutcome, MLModelMetadata
-from ..analytics.ml_models import NBAXGBoostModel
+from ..models import Recommendation, Game, PredictionOutcome, MLModelMetadata, Player, Team, BettingOdds
+from ..analytics.ml_models import NBAXGBoostModel, FeatureEngineer
+from ..models_nba_official import NBAOfficialPlayerStats
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,101 @@ class PredictionTracker:
     
     def __init__(self, db: Session):
         self.db = db
+        self.feature_engineer = FeatureEngineer(db)
+        
+    def capture_feature_snapshot(self, game: Game) -> Dict:
+        """Capture comprehensive feature snapshot for ML model prediction."""
+        try:
+            # Get basic rolling stats
+            home_stats = self.feature_engineer.get_team_rolling_stats(game.home_team_id, game.game_date)
+            away_stats = self.feature_engineer.get_team_rolling_stats(game.away_team_id, game.game_date)
+            
+            # Get hustle and defense stats (using current season)
+            home_hustle = self.feature_engineer.get_team_hustle_defense_stats(game.home_team_id, "2023-24")
+            away_hustle = self.feature_engineer.get_team_hustle_defense_stats(game.away_team_id, "2023-24")
+            
+            # Get betting odds snapshot
+            betting_odds = self.db.query(BettingOdds).filter(
+                BettingOdds.game_id == game.id
+            ).order_by(BettingOdds.timestamp.desc()).first()
+            
+            snapshot = {
+                "game_id": game.id,
+                "game_date": game.game_date.isoformat(),
+                "home_team": game.home_team.name,
+                "away_team": game.away_team.name,
+                "home_team_id": game.home_team_id,
+                "away_team_id": game.away_team_id,
+                
+                # Basic stats
+                "home_ppg": home_stats.get("ppg", 0),
+                "away_ppg": away_stats.get("ppg", 0),
+                "home_rpg": home_stats.get("rpg", 0),
+                "away_rpg": away_stats.get("rpg", 0),
+                "home_apg": home_stats.get("apg", 0),
+                "away_apg": away_stats.get("apg", 0),
+                
+                # Conference matchup
+                "is_home_conference_match": 1 if game.home_team.conference == game.away_team.conference else 0,
+                
+                # Hustle and defense stats (new "hidden" features)
+                "home_hustle_score": home_hustle.get("hustle_score", 0),
+                "away_hustle_score": away_hustle.get("hustle_score", 0),
+                "home_defense_fg_diff": home_hustle.get("team_defense_fg_diff", 0),
+                "away_defense_fg_diff": away_hustle.get("team_defense_fg_diff", 0),
+                "home_contested_shots": home_hustle.get("team_contested_shots", 0),
+                "away_contested_shots": away_hustle.get("team_contested_shots", 0),
+                "home_deflections": home_hustle.get("team_deflections", 0),
+                "away_deflections": away_hustle.get("team_deflections", 0),
+                "home_screen_assists": home_hustle.get("team_screen_assists", 0),
+                "away_screen_assists": away_hustle.get("team_screen_assists", 0),
+                "home_loose_balls": home_hustle.get("team_loose_balls", 0),
+                "away_loose_balls": away_hustle.get("team_loose_balls", 0),
+                "home_charges_drawn": home_hustle.get("team_charges_drawn", 0),
+                "away_charges_drawn": away_hustle.get("team_charges_drawn", 0),
+                
+                # Betting context
+                "home_moneyline": betting_odds.home_moneyline if betting_odds else None,
+                "away_moneyline": betting_odds.away_moneyline if betting_odds else None,
+                "spread_points": betting_odds.spread_points if betting_odds else None,
+                "home_spread_price": betting_odds.home_spread_price if betting_odds else None,
+                "away_spread_price": betting_odds.away_spread_price if betting_odds else None,
+                "total_points": betting_odds.total_points if betting_odds else None,
+                "over_price": betting_odds.over_price if betting_odds else None,
+                "under_price": betting_odds.under_price if betting_odds else None,
+                
+                # Timestamp
+                "snapshot_timestamp": datetime.utcnow().isoformat()
+            }
+            
+            return snapshot
+            
+        except Exception as e:
+            logger.error(f"Error capturing feature snapshot: {e}")
+            # Return basic snapshot on error
+            return {
+                "game_id": game.id,
+                "game_date": game.game_date.isoformat(),
+                "home_team": game.home_team.name,
+                "away_team": game.away_team.name,
+                "home_team_id": game.home_team_id,
+                "away_team_id": game.away_team_id,
+                "home_ppg": 0,
+                "away_ppg": 0,
+                "home_rpg": 0,
+                "away_rpg": 0,
+                "home_apg": 0,
+                "away_apg": 0,
+                "is_home_conference_match": 1 if game.home_team.conference == game.away_team.conference else 0,
+                "home_hustle_score": 0,
+                "away_hustle_score": 0,
+                "home_defense_fg_diff": 0,
+                "away_defense_fg_diff": 0,
+                "home_contested_shots": 0,
+                "away_contested_shots": 0,
+                "error": str(e),
+                "snapshot_timestamp": datetime.utcnow().isoformat()
+            }
         
     def record_prediction(self, recommendation: Recommendation, model_used: str = None, 
                          feature_snapshot: Dict = None) -> PredictionOutcome:
@@ -196,6 +292,48 @@ class PredictionTracker:
             return True
             
         return False
+    
+    def get_xgboost_prediction(self, game: Game) -> Dict:
+        """Get XGBoost prediction with enhanced features for a game."""
+        try:
+            model = NBAXGBoostModel()
+            
+            # Get the prediction probability
+            prediction_prob = model.predict_one(game, self.db)
+            
+            if prediction_prob is None:
+                return {
+                    "model": "xgboost",
+                    "error": "Model not available or insufficient data",
+                    "confidence": 0,
+                    "recommended_pick": "pending"
+                }
+            
+            # Convert probability to confidence and pick
+            confidence = prediction_prob
+            recommended_pick = game.home_team.name if confidence > 0.5 else game.away_team.name
+            
+            # Capture feature snapshot for this prediction
+            feature_snapshot = self.capture_feature_snapshot(game)
+            
+            return {
+                "model": "xgboost",
+                "confidence": confidence,
+                "recommended_pick": recommended_pick,
+                "home_win_probability": prediction_prob,
+                "away_win_probability": 1 - prediction_prob,
+                "feature_snapshot": feature_snapshot,
+                "is_high_confidence": confidence > 0.65 or confidence < 0.35  # High confidence if >65% or <35%
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting XGBoost prediction: {e}")
+            return {
+                "model": "xgboost",
+                "error": str(e),
+                "confidence": 0,
+                "recommended_pick": "pending"
+            }
     
     def resolve_all_pending_predictions(self) -> int:
         """Resolve all pending predictions for games that are now final."""

@@ -1,0 +1,89 @@
+{
+  "final_test": {
+    "test_timestamp": "2026-02-10T09:54:14.540121",
+    "season_tested": "2025-26",
+    "total_endpoints": 4,
+    "successful": 0,
+    "failed": 4,
+    "success_rate": 0.0,
+    "results": [
+      {
+        "endpoint": "leaguedashplayerclutch",
+        "season": "2025-26",
+        "status_code": 500,
+        "success": false,
+        "error": "HTTP 500"
+      },
+      {
+        "endpoint": "leaguedashplayershotlocations",
+        "season": "2025-26",
+        "status_code": 500,
+        "success": false,
+        "error": "HTTP 500"
+      },
+      {
+        "endpoint": "leaguedashptstats",
+        "season": "2025-26",
+        "status_code": 500,
+        "success": false,
+        "error": "HTTP 500"
+      },
+      {
+        "endpoint": "leaguedashteamstats",
+        "season": "2025-26",
+        "status_code": 500,
+        "success": false,
+        "error": "HTTP 500"
+      }
+    ],
+    "breakthrough_found": false
+  },
+  "working_endpoints_validation": {
+    "working_endpoints_tested": 4,
+    "successful_in_2025": 2,
+    "results": [
+      {
+        "endpoint": "leaguedashplayerstats",
+        "season": "2025-26",
+        "status_code": 500,
+        "success": false,
+        "error": "HTTP 500"
+      },
+      {
+        "endpoint": "leaguedashptdefend",
+        "season": "2025-26",
+        "status_code": 500,
+        "success": false,
+        "error": "HTTP 500"
+      },
+      {
+        "endpoint": "leaguehustlestatsplayer",
+        "season": "2025-26",
+        "status_code": 200,
+        "success": true,
+        "error": null,
+        "record_count": 524,
+        "headers": [
+          "PLAYER_ID",
+          "PLAYER_NAME",
+          "TEAM_ID"
+        ]
+      },
+      {
+        "endpoint": "leaguehustlestatsteam",
+        "season": "2025-26",
+        "status_code": 200,
+        "success": true,
+        "error": null,
+        "record_count": 30,
+        "headers": [
+          "TEAM_ID",
+          "TEAM_NAME",
+          "MIN"
+        ]
+      }
+    ]
+  },
+  "timestamp": "2026-02-10T09:54:51.479923",
+  "conclusion": "2025-26 season test complete"
+}

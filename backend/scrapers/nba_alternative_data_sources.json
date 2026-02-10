@@ -1,0 +1,192 @@
+{
+  "total_working_alternatives": 1,
+  "total_tested": 21,
+  "overall_success_rate": 4.761904761904762,
+  "breakthroughs": {
+    "clutch": [
+      {
+        "endpoint": "leaguedashplayerbiostats",
+        "status_code": 200,
+        "success": true,
+        "record_count": 572,
+        "headers": [
+          "PLAYER_ID",
+          "PLAYER_NAME",
+          "TEAM_ID"
+        ]
+      }
+    ]
+  },
+  "by_category": {
+    "clutch": {
+      "category": "clutch",
+      "total_tested": 6,
+      "successful": 1,
+      "success_rate": 16.666666666666664,
+      "working_endpoints": [
+        {
+          "endpoint": "leaguedashplayerbiostats",
+          "status_code": 200,
+          "success": true,
+          "record_count": 572,
+          "headers": [
+            "PLAYER_ID",
+            "PLAYER_NAME",
+            "TEAM_ID"
+          ]
+        }
+      ],
+      "all_results": [
+        {
+          "endpoint": "leaguedashplayerclutch",
+          "status_code": 500,
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "endpoint": "leaguedashplayerstats",
+          "status_code": 500,
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "endpoint": "stats/teams/clutch-traditional",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "leaguedashplayerbiostats",
+          "status_code": 200,
+          "success": true,
+          "record_count": 572,
+          "headers": [
+            "PLAYER_ID",
+            "PLAYER_NAME",
+            "TEAM_ID"
+          ]
+        },
+        {
+          "endpoint": "stats/players/clutch-traditional",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "playerdashboardbyclutch",
+          "status_code": 500,
+          "success": false,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    "shooting": {
+      "category": "shooting",
+      "total_tested": 10,
+      "successful": 0,
+      "success_rate": 0.0,
+      "working_endpoints": [],
+      "all_results": [
+        {
+          "endpoint": "leaguedashplayershotlocations",
+          "status_code": 500,
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "endpoint": "leaguedashplayershotstats",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "stats/teams/catch-shoot",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "stats/players/opponent-shooting",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "stats/players/shooting",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "shotdashboard",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "stats/teams/shots-general",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "stats/players/catch-shoot",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "stats/teams/opponent-shooting",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "stats/players/shots-general",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        }
+      ]
+    },
+    "tracking": {
+      "category": "tracking",
+      "total_tested": 5,
+      "successful": 0,
+      "success_rate": 0.0,
+      "working_endpoints": [],
+      "all_results": [
+        {
+          "endpoint": "leaguedashplayertracking",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "leaguedashptstats",
+          "status_code": 500,
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "endpoint": "playerdashboardbytracking",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "leaguedashplayerspeeddistance",
+          "status_code": 404,
+          "success": false,
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "leaguedashptdefend",
+          "status_code": 500,
+          "success": false,
+          "error": "HTTP 500"
+        }
+      ]
+    }
+  }
+}

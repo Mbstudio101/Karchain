@@ -178,3 +178,59 @@ export const fetchAdvancedProps = async (minEv: number = 0, minKelly: number = 0
     const { data } = await api.get(`/recommendations/advanced-props?min_ev=${minEv}&min_kelly=${minKelly}`);
     return data;
 };
+
+// Genius Picks
+export interface GeniusPick {
+    player: string;
+    prop: string;
+    line: number;
+    pick: string;
+    odds: number;
+    ev: string;
+    edge: string;
+    kelly_bet: string;
+    hit_rate: string;
+    streak: string;
+    confidence_range: string;
+    grade: string;
+    bp_star_rating?: number | null;
+    bp_agrees?: boolean;
+    opponent_adjusted?: boolean;
+    is_b2b?: boolean;
+    weighted_projection?: number | null;
+}
+
+export interface GeniusPicksResponse {
+    genius_count: number;
+    picks: GeniusPick[];
+}
+
+export const fetchGeniusPicks = async (): Promise<GeniusPicksResponse> => {
+    const { data } = await api.get<GeniusPicksResponse>("/recommendations/genius-picks");
+    return data;
+};
+
+// Mixed Parlay
+export interface ParlayLeg {
+    game_id: number;
+    pick: string;
+    odds: number;
+    confidence: number;
+}
+
+export interface ParlayResponse {
+    legs: ParlayLeg[];
+    combined_odds: number;
+    potential_payout: number;
+    confidence_score: number;
+}
+
+export const fetchMixedParlay = async (legs: number, riskLevel: string = "balanced"): Promise<ParlayResponse> => {
+    const { data } = await api.post<ParlayResponse>(`/recommendations/generate-mixed-parlay?legs=${legs}&risk_level=${riskLevel}`);
+    return data;
+};
+
+export const fetchParlay = async (legs: number = 3): Promise<ParlayResponse> => {
+    const { data } = await api.post<ParlayResponse>(`/recommendations/generate-parlay?legs=${legs}`);
+    return data;
+};

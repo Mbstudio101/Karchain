@@ -1,0 +1,269 @@
+{
+  "created_at": "2026-02-10T08:25:57.541441",
+  "base_url": "https://stats.nba.com/stats",
+  "headers": {
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive",
+    "Host": "stats.nba.com",
+    "Origin": "https://www.nba.com",
+    "Referer": "https://www.nba.com/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "x-nba-stats-origin": "stats",
+    "x-nba-stats-token": "true"
+  },
+  "endpoints": {
+    "https://www.nba.com/stats/players/traditional": {
+      "endpoint": "leaguedashplayerstats",
+      "description": "Traditional Player Statistics",
+      "measure_type": "Base",
+      "per_mode": "Totals",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "Totals",
+        "MeasureType": "Base"
+      },
+      "key_stats": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "GP",
+        "MIN",
+        "PTS",
+        "REB",
+        "AST",
+        "STL",
+        "BLK",
+        "FG_PCT",
+        "FG3_PCT",
+        "FT_PCT"
+      ]
+    },
+    "https://www.nba.com/stats/players/clutch-traditional": {
+      "endpoint": "leaguedashplayerclutch",
+      "description": "Player Clutch Statistics (Last 5 min, +/- 5 points)",
+      "measure_type": "Base",
+      "per_mode": "Totals",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "Totals",
+        "ClutchTime": "Last 5 Minutes",
+        "PointDiff": 5
+      },
+      "key_stats": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "GP",
+        "MIN",
+        "PTS",
+        "REB",
+        "AST",
+        "PLUS_MINUS",
+        "FG_PCT",
+        "FG3_PCT"
+      ]
+    },
+    "https://www.nba.com/stats/players/shots-general": {
+      "endpoint": "leaguedashplayershotlocations",
+      "description": "Player Shot Locations and General Shooting Stats",
+      "measure_type": "Base",
+      "per_mode": "Totals",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "Totals",
+        "DistanceRange": "5ft Range"
+      },
+      "key_stats": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "FGM",
+        "FGA",
+        "FG_PCT",
+        "FG3M",
+        "FG3A",
+        "FG3_PCT",
+        "EFG_PCT",
+        "SHOT_DISTANCE"
+      ]
+    },
+    "https://www.nba.com/stats/players/defense-dash-overall": {
+      "endpoint": "leaguedashptdefend",
+      "description": "Player Defense Statistics (Defended FG%, etc.)",
+      "measure_type": "Base",
+      "per_mode": "Totals",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "Totals",
+        "DefenseCategory": "Overall"
+      },
+      "key_stats": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "DEF_RIM_FGM",
+        "DEF_RIM_FGA",
+        "DEF_RIM_FG_PCT",
+        "DREB",
+        "STL",
+        "BLK"
+      ]
+    },
+    "https://www.nba.com/stats/players/transition": {
+      "endpoint": "leaguedashptstats",
+      "description": "Player Transition Statistics (Fast break, etc.)",
+      "measure_type": "Transition",
+      "per_mode": "PerGame",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "PerGame",
+        "PtMeasureType": "Transition"
+      },
+      "key_stats": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "TRANSITION_FGM",
+        "TRANSITION_FGA",
+        "TRANSITION_FG_PCT",
+        "TRANSITION_PTS",
+        "TRANSITION_POSS"
+      ]
+    },
+    "https://www.nba.com/stats/players/catch-shoot": {
+      "endpoint": "leaguedashptstats",
+      "description": "Player Catch and Shoot Statistics",
+      "measure_type": "CatchShoot",
+      "per_mode": "PerGame",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "PerGame",
+        "PtMeasureType": "CatchShoot"
+      },
+      "key_stats": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "CATCH_SHOOT_FGM",
+        "CATCH_SHOOT_FGA",
+        "CATCH_SHOOT_FG_PCT",
+        "CATCH_SHOOT_PTS",
+        "CATCH_SHOOT_EFG_PCT"
+      ]
+    },
+    "https://www.nba.com/stats/players/hustle": {
+      "endpoint": "leaguehustlestatsplayer",
+      "description": "Player Hustle Statistics (Loose balls, charges, etc.)",
+      "measure_type": "Base",
+      "per_mode": "Totals",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "Totals"
+      },
+      "key_stats": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "SCREEN_ASSISTS",
+        "SCREEN_AST_PTS",
+        "LOOSE_BALLS_RECOVERED",
+        "CHARGES_DRAWN",
+        "DEFLECTIONS"
+      ]
+    },
+    "https://www.nba.com/stats/teams/traditional": {
+      "endpoint": "leaguedashteamstats",
+      "description": "Traditional Team Statistics",
+      "measure_type": "Base",
+      "per_mode": "Totals",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "Totals",
+        "MeasureType": "Base"
+      },
+      "key_stats": [
+        "TEAM_NAME",
+        "GP",
+        "W",
+        "L",
+        "W_PCT",
+        "MIN",
+        "PTS",
+        "REB",
+        "AST",
+        "STL",
+        "BLK",
+        "FG_PCT",
+        "FG3_PCT",
+        "FT_PCT"
+      ]
+    },
+    "https://www.nba.com/stats/teams/defense-dash-overall": {
+      "endpoint": "leaguedashptdefend",
+      "description": "Team Defense Statistics",
+      "measure_type": "Base",
+      "per_mode": "Totals",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "Totals",
+        "DefenseCategory": "Overall"
+      },
+      "key_stats": [
+        "TEAM_NAME",
+        "DEF_RIM_FGM",
+        "DEF_RIM_FGA",
+        "DEF_RIM_FG_PCT",
+        "DREB",
+        "STL",
+        "BLK",
+        "OPP_PTS"
+      ]
+    },
+    "https://www.nba.com/stats/teams/hustle": {
+      "endpoint": "leaguehustlestatsteam",
+      "description": "Team Hustle Statistics",
+      "measure_type": "Base",
+      "per_mode": "Totals",
+      "season_type": "Regular Season",
+      "example_params": {
+        "Season": "2023-24",
+        "SeasonType": "Regular Season",
+        "LeagueID": "00",
+        "PerMode": "Totals"
+      },
+      "key_stats": [
+        "TEAM_NAME",
+        "SCREEN_ASSISTS",
+        "SCREEN_AST_PTS",
+        "LOOSE_BALLS_RECOVERED",
+        "CHARGES_DRAWN",
+        "DEFLECTIONS",
+        "CONTESTED_SHOTS_2PT",
+        "CONTESTED_SHOTS_3PT"
+      ]
+    }
+  },
+  "total_endpoints": 10
+}

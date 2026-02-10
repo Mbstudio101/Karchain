@@ -1,188 +1,409 @@
-import logging
+#!/usr/bin/env python3
+"""
+NBA Official Data Fetcher for Karchain Backend
+
+This script fetches comprehensive NBA statistics from the official NBA API
+and integrates with your existing database and analytics system.
+
+Endpoints discovered from your NBA links:
+- Player traditional, clutch, defense, hustle stats
+- Team traditional, defense, hustle stats
+- Advanced shooting and transition statistics
+"""
+
 import sys
 import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import requests
+import pandas as pd
+import json
+import logging
 from datetime import datetime, timedelta
-from nba_api.live.nba.endpoints import scoreboard
-from nba_api.stats.endpoints import boxscoretraditionalv3
+from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
-from pathlib import Path
+from app.database import SessionLocal, get_db
+from app import models, schemas
+import time
 
-# Add backend directory to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from app.database import SessionLocal
-from app.models import Game, Team, Player, PlayerStats
-
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def sync_official_scoreboard():
-    """
-    Syncs today's games using the official NBA Live API.
-    """
-    logger.info("Starting official NBA scoreboard sync...")
-    db = SessionLocal()
-    try:
-        # 1. Fetch Today's Scoreboard
-        board = scoreboard.ScoreBoard()
-        data = board.get_dict()
-        games_data = data.get('scoreboard', {}).get('games', [])
-
-        if not games_data:
-            logger.info("No games found on the official scoreboard for today.")
+class NBAOfficialDataFetcher:
+    """Fetches NBA data from official API and integrates with Karchain backend"""
+    
+    BASE_URL = "https://stats.nba.com/stats"
+    
+    # Headers required for NBA API access
+    HEADERS = {
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Connection': 'keep-alive',
+        'Host': 'stats.nba.com',
+        'Origin': 'https://www.nba.com',
+        'Referer': 'https://www.nba.com/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'x-nba-stats-origin': 'stats',
+        'x-nba-stats-token': 'true'
+    }
+    
+    def __init__(self, db: Session = None):
+        self.db = db or next(get_db())
+        self.session = requests.Session()
+        self.session.headers.update(self.HEADERS)
+    
+    def fetch_endpoint(self, endpoint: str, params: Dict[str, Any]) -> Optional[Dict]:
+        """Fetch data from NBA API endpoint"""
+        url = f"{self.BASE_URL}/{endpoint}"
+        
+        try:
+            logger.info(f"Fetching {endpoint} with params: {params}")
+            response = self.session.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            if 'resultSets' in data and len(data['resultSets']) > 0:
+                return data
+            else:
+                logger.warning(f"No data returned for {endpoint}")
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching {endpoint}: {e}")
+            return None
+    
+    def fetch_player_traditional_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+        """Fetch traditional player statistics"""
+        params = {
+            'Season': season,
+            'SeasonType': 'Regular Season',
+            'LeagueID': '00',
+            'PerMode': 'Totals',
+            'MeasureType': 'Base',
+            'LastNGames': 0,
+            'Month': 0,
+            'OpponentTeamID': 0,
+            'PaceAdjust': 'N',
+            'Period': 0,
+            'PlusMinus': 'N',
+            'Rank': 'N',
+            'TeamID': 0
+        }
+        
+        data = self.fetch_endpoint('leaguedashplayerstats', params)
+        if data:
+            result_set = data['resultSets'][0]
+            df = pd.DataFrame(result_set['rowSet'], columns=result_set['headers'])
+            
+            # Add metadata
+            df['season'] = season
+            df['stat_type'] = 'traditional'
+            df['fetched_at'] = datetime.now()
+            
+            logger.info(f"Fetched traditional stats for {len(df)} players")
+            return df
+        return None
+    
+    def fetch_player_advanced_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+        """Fetch advanced player statistics"""
+        params = {
+            'Season': season,
+            'SeasonType': 'Regular Season',
+            'LeagueID': '00',
+            'PerMode': 'Totals',
+            'MeasureType': 'Advanced',
+            'LastNGames': 0,
+            'Month': 0,
+            'OpponentTeamID': 0,
+            'PaceAdjust': 'N',
+            'Period': 0,
+            'PlusMinus': 'N',
+            'Rank': 'N',
+            'TeamID': 0
+        }
+        
+        data = self.fetch_endpoint('leaguedashplayerstats', params)
+        if data:
+            result_set = data['resultSets'][0]
+            df = pd.DataFrame(result_set['rowSet'], columns=result_set['headers'])
+            
+            # Add metadata
+            df['season'] = season
+            df['stat_type'] = 'advanced'
+            df['fetched_at'] = datetime.now()
+            
+            logger.info(f"Fetched advanced stats for {len(df)} players")
+            return df
+        return None
+    
+    def fetch_player_clutch_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+        """Fetch clutch player statistics"""
+        params = {
+            'Season': season,
+            'SeasonType': 'Regular Season',
+            'LeagueID': '00',
+            'PerMode': 'Totals',
+            'MeasureType': 'Base',
+            'ClutchTime': 'Last 5 Minutes',
+            'PointDiff': 5,
+            'LastNGames': 0,
+            'Month': 0,
+            'OpponentTeamID': 0,
+            'Period': 0,
+            'Rank': 'N',
+            'TeamID': 0
+        }
+        
+        data = self.fetch_endpoint('leaguedashplayerclutch', params)
+        if data:
+            result_set = data['resultSets'][0]
+            df = pd.DataFrame(result_set['rowSet'], columns=result_set['headers'])
+            
+            # Add metadata
+            df['season'] = season
+            df['stat_type'] = 'clutch'
+            df['fetched_at'] = datetime.now()
+            
+            logger.info(f"Fetched clutch stats for {len(df)} players")
+            return df
+        return None
+    
+    def fetch_player_defense_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+        """Fetch player defense statistics"""
+        params = {
+            'Season': season,
+            'SeasonType': 'Regular Season',
+            'LeagueID': '00',
+            'PerMode': 'Totals',
+            'DefenseCategory': 'Overall',
+            'LastNGames': 0,
+            'Month': 0,
+            'OpponentTeamID': 0,
+            'Period': 0,
+            'TeamID': 0
+        }
+        
+        data = self.fetch_endpoint('leaguedashptdefend', params)
+        if data:
+            result_set = data['resultSets'][0]
+            df = pd.DataFrame(result_set['rowSet'], columns=result_set['headers'])
+            
+            # Add metadata
+            df['season'] = season
+            df['stat_type'] = 'defense'
+            df['fetched_at'] = datetime.now()
+            
+            logger.info(f"Fetched defense stats for {len(df)} players")
+            return df
+        return None
+    
+    def fetch_player_hustle_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+        """Fetch player hustle statistics"""
+        params = {
+            'Season': season,
+            'SeasonType': 'Regular Season',
+            'LeagueID': '00',
+            'PerMode': 'Totals',
+            'LastNGames': 0,
+            'Month': 0,
+            'OpponentTeamID': 0,
+            'Period': 0,
+            'TeamID': 0
+        }
+        
+        data = self.fetch_endpoint('leaguehustlestatsplayer', params)
+        if data:
+            result_set = data['resultSets'][0]
+            df = pd.DataFrame(result_set['rowSet'], columns=result_set['headers'])
+            
+            # Add metadata
+            df['season'] = season
+            df['stat_type'] = 'hustle'
+            df['fetched_at'] = datetime.now()
+            
+            logger.info(f"Fetched hustle stats for {len(df)} players")
+            return df
+        return None
+    
+    def fetch_team_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+        """Fetch team statistics"""
+        params = {
+            'Season': season,
+            'SeasonType': 'Regular Season',
+            'LeagueID': '00',
+            'PerMode': 'Totals',
+            'MeasureType': 'Base',
+            'LastNGames': 0,
+            'Month': 0,
+            'OpponentTeamID': 0,
+            'PaceAdjust': 'N',
+            'Period': 0,
+            'PlusMinus': 'N',
+            'Rank': 'N',
+            'TeamID': 0
+        }
+        
+        data = self.fetch_endpoint('leaguedashteamstats', params)
+        if data:
+            result_set = data['resultSets'][0]
+            df = pd.DataFrame(result_set['rowSet'], columns=result_set['headers'])
+            
+            # Add metadata
+            df['season'] = season
+            df['stat_type'] = 'team_traditional'
+            df['fetched_at'] = datetime.now()
+            
+            logger.info(f"Fetched team stats for {len(df)} teams")
+            return df
+        return None
+    
+    def save_player_stats_to_db(self, df: pd.DataFrame, stat_type: str):
+        """Save player statistics to database"""
+        if df is None or df.empty:
+            logger.warning(f"No data to save for {stat_type}")
             return
-
-        for game_entry in games_data:
-            game_id_official = game_entry.get('gameId')
-            home_team_data = game_entry.get('homeTeam', {})
-            away_team_data = game_entry.get('awayTeam', {})
-            
-            home_name = home_team_data.get('teamName')
-            away_name = away_team_data.get('teamName')
-            
-            home_score = home_team_data.get('score', 0)
-            away_score = away_team_data.get('score', 0)
-            
-            status_text = game_entry.get('gameStatusText', 'Scheduled')
-            period = game_entry.get('period', 0)
-            
-            # Map status
-            final_status = "Scheduled"
-            if "Final" in status_text:
-                final_status = "Final"
-            elif period > 0:
-                final_status = "Live"
+        
+        try:
+            # Convert DataFrame to database models
+            for _, row in df.iterrows():
+                # Create or update player stats record
+                player_stats = models.PlayerStats(
+                    player_id=row.get('PLAYER_ID'),
+                    player_name=row.get('PLAYER_NAME'),
+                    team_id=row.get('TEAM_ID'),
+                    team_abbreviation=row.get('TEAM_ABBREVIATION'),
+                    season=row.get('season'),
+                    stat_type=stat_type,
+                    games_played=row.get('GP', 0),
+                    minutes_played=row.get('MIN', 0),
+                    points=row.get('PTS', 0),
+                    rebounds=row.get('REB', 0),
+                    assists=row.get('AST', 0),
+                    steals=row.get('STL', 0),
+                    blocks=row.get('BLK', 0),
+                    turnovers=row.get('TOV', 0),
+                    field_goals_made=row.get('FGM', 0),
+                    field_goals_attempted=row.get('FGA', 0),
+                    field_goal_percentage=row.get('FG_PCT', 0),
+                    three_points_made=row.get('FG3M', 0),
+                    three_points_attempted=row.get('FG3A', 0),
+                    three_point_percentage=row.get('FG3_PCT', 0),
+                    free_throws_made=row.get('FTM', 0),
+                    free_throws_attempted=row.get('FTA', 0),
+                    free_throw_percentage=row.get('FT_PCT', 0),
+                    plus_minus=row.get('PLUS_MINUS', 0),
+                    # Store raw data as JSON
+                    raw_data=row.to_dict(),
+                    fetched_at=row.get('fetched_at', datetime.now())
+                )
                 
-            # Find teams in DB
-            def find_team(name):
-                # Official API usually gives just the team name (e.g. "Celtics")
-                return db.query(Team).filter(Team.name.ilike(f"%{name}%")).first()
-
-            db_home_team = find_team(home_name)
-            db_away_team = find_team(away_name)
+                self.db.merge(player_stats)
             
-            if db_home_team and db_away_team:
-                now = datetime.utcnow()
-                start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-                end_of_day = start_of_day + timedelta(days=1)
+            self.db.commit()
+            logger.info(f"Saved {len(df)} {stat_type} player stats to database")
+            
+        except Exception as e:
+            logger.error(f"Error saving {stat_type} stats to database: {e}")
+            self.db.rollback()
+    
+    def save_team_stats_to_db(self, df: pd.DataFrame):
+        """Save team statistics to database"""
+        if df is None or df.empty:
+            logger.warning("No team data to save")
+            return
+        
+        try:
+            # Convert DataFrame to database models
+            for _, row in df.iterrows():
+                team_stats = models.TeamStats(
+                    team_id=row.get('TEAM_ID'),
+                    team_name=row.get('TEAM_NAME'),
+                    season=row.get('season'),
+                    games_played=row.get('GP', 0),
+                    wins=row.get('W', 0),
+                    losses=row.get('L', 0),
+                    win_percentage=row.get('W_PCT', 0),
+                    points_per_game=row.get('PTS', 0),
+                    rebounds_per_game=row.get('REB', 0),
+                    assists_per_game=row.get('AST', 0),
+                    steals_per_game=row.get('STL', 0),
+                    blocks_per_game=row.get('BLK', 0),
+                    turnovers_per_game=row.get('TOV', 0),
+                    field_goal_percentage=row.get('FG_PCT', 0),
+                    three_point_percentage=row.get('FG3_PCT', 0),
+                    free_throw_percentage=row.get('FT_PCT', 0),
+                    # Store raw data as JSON
+                    raw_data=row.to_dict(),
+                    fetched_at=row.get('fetched_at', datetime.now())
+                )
                 
-                game = db.query(Game).filter(
-                    Game.home_team_id == db_home_team.id,
-                    Game.away_team_id == db_away_team.id,
-                    Game.game_date >= start_of_day,
-                    Game.game_date < end_of_day
-                ).first()
-                
-                if not game:
-                    logger.info(f"Creating NEW game: {away_name} @ {home_name}")
-                    # Use a default time if entry doesn't have it, but scoreboard usually has today's games
-                    game = Game(
-                        home_team_id=db_home_team.id,
-                        away_team_id=db_away_team.id,
-                        game_date=now, 
-                        sport="NBA",
-                        status=final_status
-                    )
-                    db.add(game)
-                    db.flush()
+                self.db.merge(team_stats)
+            
+            self.db.commit()
+            logger.info(f"Saved {len(df)} team stats to database")
+            
+        except Exception as e:
+            logger.error(f"Error saving team stats to database: {e}")
+            self.db.rollback()
+    
+    def fetch_all_stats(self, season: str = "2023-24") -> Dict[str, pd.DataFrame]:
+        """Fetch all NBA statistics for the season"""
+        all_stats = {}
+        
+        logger.info(f"Fetching all NBA stats for {season} season...")
+        
+        # Player stats
+        all_stats['player_traditional'] = self.fetch_player_traditional_stats(season)
+        all_stats['player_advanced'] = self.fetch_player_advanced_stats(season)
+        all_stats['player_clutch'] = self.fetch_player_clutch_stats(season)
+        all_stats['player_defense'] = self.fetch_player_defense_stats(season)
+        all_stats['player_hustle'] = self.fetch_player_hustle_stats(season)
+        
+        # Team stats
+        all_stats['team_traditional'] = self.fetch_team_stats(season)
+        
+        # Save all to database
+        for stat_type, df in all_stats.items():
+            if df is not None and not df.empty:
+                if 'player' in stat_type:
+                    self.save_player_stats_to_db(df, stat_type.replace('player_', ''))
+                else:
+                    self.save_team_stats_to_db(df)
+        
+        return all_stats
+    
+    def close(self):
+        """Close database connection"""
+        if self.db:
+            self.db.close()
 
-                logger.info(f"Updating game {game.id}: {away_name} @ {home_name} -> {final_status} ({away_score}-{home_score})")
-                game.status = final_status
-                game.home_score = home_score
-                game.away_score = away_score
-                game.quarter = f"Q{period}" if period > 0 else None
-                if status_text == "Halftime":
-                    game.quarter = "HT"
-                
-                # If game is Final or Live, we could fetch boxscore, but boxscoretraditionalv3 needs gameId
-                # Note: nba_api stats endpoints often use the official 10-digit game IDs (e.g. '0022300001')
-                if final_status in ["Final", "Live"] and game_id_official:
-                    try:
-                        sync_official_boxscore(db, game, game_id_official)
-                    except Exception as e:
-                        logger.error(f"Failed to sync boxscore for game {game.id}: {e}")
-
-        db.commit()
-        logger.info("Official scoreboard sync complete.")
+def main():
+    """Main function to run the NBA data fetcher"""
+    fetcher = NBAOfficialDataFetcher()
+    
+    try:
+        logger.info("Starting NBA Official Data Fetcher...")
+        
+        # Fetch all stats for current season
+        season = "2023-24"
+        all_stats = fetcher.fetch_all_stats(season)
+        
+        # Print summary
+        logger.info("\n=== NBA Data Fetch Summary ===")
+        for stat_type, df in all_stats.items():
+            if df is not None and not df.empty:
+                logger.info(f"✅ {stat_type}: {len(df)} records")
+            else:
+                logger.warning(f"❌ {stat_type}: No data fetched")
+        
+        logger.info("NBA data fetching completed successfully!")
         
     except Exception as e:
-        logger.error(f"Error during official sync: {e}")
-        db.rollback()
+        logger.error(f"Error in main execution: {e}")
     finally:
-        db.close()
-
-def sync_official_boxscore(db: Session, game: Game, official_game_id: str):
-    """
-    Syncs player stats for a specific game using BoxScoreTraditionalV3.
-    """
-    logger.info(f"Fetching boxscore for official game ID: {official_game_id}")
-    box = boxscoretraditionalv3.BoxScoreTraditionalV3(game_id=official_game_id)
-    data = box.get_dict()
-    
-    # Structure for V3 is typically: data['boxScoreTraditional']
-    box_data = data.get('boxScoreTraditional', {})
-    home_players = box_data.get('homeTeam', {}).get('players', [])
-    away_players = box_data.get('awayTeam', {}).get('players', [])
-    
-    all_players = home_players + away_players
-    
-    for p_data in all_players:
-        player_name = f"{p_data.get('firstName')} {p_data.get('familyName')}"
-        stats = p_data.get('statistics', {})
-        
-        if not stats: continue
-        
-        # Find or create player
-        db_player = db.query(Player).filter(Player.name == player_name).first()
-        if not db_player:
-            # We skip for now as we should have players from the daily scrape
-            continue
-            
-        # Find or update stat entry
-        stat_entry = db.query(PlayerStats).filter(
-            PlayerStats.player_id == db_player.id,
-            PlayerStats.game_id == game.id
-        ).first()
-        
-        if not stat_entry:
-            # Get opponent name
-            is_home = (db_player.team_id == game.home_team_id)
-            opp_team_id = game.away_team_id if is_home else game.home_team_id
-            opp_team = db.query(Team).get(opp_team_id)
-            
-            stat_entry = PlayerStats(
-                player_id=db_player.id,
-                game_id=game.id,
-                game_date=game.game_date.date(),
-                opponent=opp_team.name if opp_team else "Unknown"
-            )
-            db.add(stat_entry)
-            
-        # Update stats
-        try:
-            # V3 uses keys like 'points', 'reboundsTotal', 'assists', etc.
-            stat_entry.points = float(stats.get('points', 0))
-            stat_entry.rebounds = float(stats.get('reboundsTotal', 0))
-            stat_entry.assists = float(stats.get('assists', 0))
-            stat_entry.steals = float(stats.get('steals', 0))
-            stat_entry.blocks = float(stats.get('blocks', 0))
-            
-            # Minutes is usually a string like "PT24M30S" or "24:30"
-            min_str = stats.get('minutes', '0:00')
-            if 'PT' in min_str:  # ISO duration format PT24M30S
-                import re
-                m_match = re.search(r'(\d+)M', min_str)
-                s_match = re.search(r'(\d+)S', min_str)
-                mins = int(m_match.group(1)) if m_match else 0
-                secs = int(s_match.group(1)) if s_match else 0
-                stat_entry.minutes_played = float(mins) + round(secs / 60, 2)
-            elif ':' in min_str:
-                parts = min_str.split(':')
-                stat_entry.minutes_played = float(parts[0]) + round(float(parts[1]) / 60, 2) if len(parts) > 1 else float(parts[0])
-            else:
-                stat_entry.minutes_played = float(min_str)
-        except Exception as e:
-            logger.warning(f"Error parsing stats for {player_name}: {e}")
+        fetcher.close()
 
 if __name__ == "__main__":
-    sync_official_scoreboard()
+    main()

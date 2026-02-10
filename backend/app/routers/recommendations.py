@@ -723,17 +723,85 @@ def generate_parlay(legs: int = 3, db: Session = Depends(get_db)):
 
 
 @router.post("/generate-mixed-parlay", response_model=schemas.ParlayBase)
-def generate_mixed_parlay(legs: int = 5, db: Session = Depends(get_db)):
+def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", db: Session = Depends(get_db)):
     """
     Generate an AI-powered parlay mixing player props with game bets.
-    Now with: date filtering (2c), correlation detection (1c/5a),
-    opponent adjustments (1a), BP intelligence (1b), minutes (1d),
-    B2B detection (3b), home/away splits (3c), rolling stats (3a).
+    Enhanced with reconstructed NBA data: clutch performance, tracking metrics,
+    athletic analytics, and advanced ML-enhanced predictions.
+    
+    Args:
+        legs: Number of parlay legs (default: 5)
+        risk_level: Risk level - 'conservative', 'balanced', or 'aggressive' (default: 'balanced')
     """
-    from ..analytics.advanced_stats import (
-        analyze_prop, detect_correlation, calculate_parlay_correlation_penalty,
-        StreakStatus, BetConfidence
-    )
+    today = get_current_gameday()
+    start_of_day, end_of_day = get_gameday_range(today)
+
+    try:
+        # Use enhanced parlay generator with reconstructed NBA data
+        from ..analytics.enhanced_parlay_generator import EnhancedParlayGenerator
+
+        generator = EnhancedParlayGenerator()
+        result = generator.generate_ai_parlay(legs=legs, risk_level=risk_level)
+
+        # Map to ParlayLeg schema format
+        parlay_legs = []
+        for leg in result['legs']:
+            if leg['type'] == 'prop':
+                # Look up game_id from player props
+                player = db.query(models.Player).filter(
+                    models.Player.name == leg.get('player', '')
+                ).first()
+                game_id = 0
+                if player:
+                    prop = db.query(models.PlayerProps).join(
+                        models.Game
+                    ).filter(
+                        models.PlayerProps.player_id == player.id,
+                        models.Game.game_date >= start_of_day,
+                        models.Game.game_date <= end_of_day
+                    ).first()
+                    if prop and prop.game_id:
+                        game_id = prop.game_id
+
+                pick_str = f"{leg.get('player', '')} {leg.get('prop_type', '').upper()} {leg['pick']} {leg.get('line', '')}"
+                parlay_legs.append(schemas.ParlayLeg(
+                    game_id=game_id,
+                    pick=pick_str,
+                    odds=int(leg.get('odds', -110)),
+                    confidence=float(leg.get('hit_rate', leg.get('confidence_score', 0.5)))
+                ))
+            else:  # game bet
+                # Find game_id from recommendation
+                game_id = 0
+                rec = db.query(models.Recommendation).filter(
+                    models.Recommendation.recommended_pick == leg.get('pick', '')
+                ).order_by(models.Recommendation.timestamp.desc()).first()
+                if rec:
+                    game_id = rec.game_id
+
+                pick_str = f"{leg.get('pick', '')} ({leg.get('bet_type', 'Spread')})"
+                parlay_legs.append(schemas.ParlayLeg(
+                    game_id=game_id,
+                    pick=pick_str,
+                    odds=int(leg.get('odds', -110)),
+                    confidence=float(leg.get('confidence', 0.5))
+                ))
+
+        return schemas.ParlayBase(
+            legs=parlay_legs,
+            combined_odds=int(result['combined_odds']),
+            potential_payout=round(result['payout'], 2),
+            confidence_score=round(result['avg_confidence'], 2)
+        )
+        
+    except Exception as e:
+        # Fallback to legacy system if enhanced system fails
+        print(f"Enhanced mixed parlay failed: {e}, falling back to legacy system")
+        
+        from ..analytics.advanced_stats import (
+            analyze_prop, detect_correlation, calculate_parlay_correlation_penalty,
+            StreakStatus, BetConfidence
+        )
 
     today = get_current_gameday()
     start_of_day, end_of_day = get_gameday_range(today)
@@ -1085,26 +1153,51 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, db: Session = De
 def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db)):
     """
     Get the absolute BEST picks with full intelligence stack.
-    Now with: real grading (4a), real streak detection (4b),
-    real confidence intervals (4c), all Phase 1 signals.
+    Enhanced with reconstructed NBA data: clutch performance, tracking metrics,
+    athletic analytics, and advanced ML-enhanced predictions.
     """
     if date is None:
         date = get_current_gameday()
 
-    from ..analytics.advanced_stats import (
-        analyze_prop, wilson_confidence_interval, StreakStatus, BetConfidence
-    )
+    try:
+        # Use enhanced genius picks system with reconstructed NBA data
+        from ..analytics.enhanced_genius_picks import get_enhanced_genius_picks
+        
+        result = get_enhanced_genius_picks(target_date=date, min_edge=0.03)
+        
+        # Add metadata about data sources
+        result['data_sources'] = {
+            'reconstructed_data': True,
+            'clutch_analytics': True,
+            'tracking_metrics': True,
+            'athletic_performance': True,
+            'defensive_impact': True,
+            'consistency_scoring': True
+        }
+        
+        # Add genius_picks field for backward compatibility
+        result['genius_picks'] = result['picks']
+        
+        return result
+        
+    except Exception as e:
+        # Fallback to legacy system if enhanced system fails
+        print(f"Enhanced genius picks failed: {e}, falling back to legacy system")
+        
+        from ..analytics.advanced_stats import (
+            analyze_prop, wilson_confidence_interval, StreakStatus, BetConfidence
+        )
 
-    league_avg_defense = _get_league_avg_defense(db)
-    league_avg_pace = _get_league_avg_pace(db)
+        league_avg_defense = _get_league_avg_defense(db)
+        league_avg_pace = _get_league_avg_pace(db)
 
-    # 1. Player Props (Elite Only) — filtered by date
-    start_utc, end_utc = get_gameday_range(date)
-    props = db.query(models.PlayerProps).join(models.Game).filter(
-        models.Game.game_date >= start_utc,
-        models.Game.game_date < end_utc
-    ).all()
-    genius_picks = []
+        # 1. Player Props (Elite Only) — filtered by date
+        start_utc, end_utc = get_gameday_range(date)
+        props = db.query(models.PlayerProps).join(models.Game).filter(
+            models.Game.game_date >= start_utc,
+            models.Game.game_date < end_utc
+        ).all()
+        genius_picks = []
 
     for prop in props:
         player = db.query(models.Player).filter(models.Player.id == prop.player_id).first()

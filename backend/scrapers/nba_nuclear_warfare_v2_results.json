@@ -1,0 +1,940 @@
+{
+  "timestamp": "2026-02-10T10:27:28.646230",
+  "strategy": "nuclear_warfare_v2",
+  "direct_endpoint_tests": {},
+  "reverse_engineered_endpoints": [
+    "breadcrumbs",
+    "siteSection",
+    "Minnesota",
+    "xRegionMap",
+    "enableResumeWatching",
+    "californiaSummerLeague",
+    "Charlotte",
+    "description"
+  ],
+  "graphql_exploration": {
+    "https://public-api.nbatopshot.com/graphql": {
+      "status": "success",
+      "schema": {
+        "errors": [
+          {
+            "message": "introspection disabled",
+            "path": [
+              "__schema"
+            ]
+          }
+        ],
+        "data": {
+          "__schema": null
+        }
+      }
+    },
+    "https://api.nba.com/graphql": {
+      "status": "http_401"
+    },
+    "https://stats.nba.com/graphql": {
+      "status": "http_404"
+    },
+    "https://www.nba.com/graphql": {
+      "status": "http_404"
+    }
+  },
+  "mobile_simulation": [
+    {
+      "url": "https://api.nba.com/mobile/v1/stats",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v1/players",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v1/teams",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v1/games",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v2/stats",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v2/players",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v2/teams",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v2/games",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v3/stats",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v3/players",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v3/teams",
+      "status": "requires_auth",
+      "status_code": 401
+    },
+    {
+      "url": "https://api.nba.com/mobile/v3/games",
+      "status": "requires_auth",
+      "status_code": 401
+    }
+  ],
+  "all_variations_test": {
+    "leaguedashplayerclutch": {
+      "status": "not_found",
+      "all_attempts": [
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayerclutch",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayerclutch"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayerclutch"
+        }
+      ]
+    },
+    "leaguedashplayershotlocations": {
+      "status": "not_found",
+      "all_attempts": [
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayershotlocations",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayershotlocations"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayershotlocations"
+        }
+      ]
+    },
+    "leaguedashplayertracking": {
+      "status": "not_found",
+      "all_attempts": [
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashplayertracking",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayertracking"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashplayertracking"
+        }
+      ]
+    },
+    "leaguedashteamclutch": {
+      "status": "not_found",
+      "all_attempts": [
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamclutch",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamclutch"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamclutch"
+        }
+      ]
+    },
+    "leaguedashteamshotlocations": {
+      "status": "not_found",
+      "all_attempts": [
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "http_500",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamshotlocations",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamshotlocations"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamshotlocations"
+        }
+      ]
+    },
+    "leaguedashteamtracking": {
+      "status": "not_found",
+      "all_attempts": [
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://stats.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "not_found",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://www.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_401",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://api.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "http_406",
+          "endpoint": "leaguedashteamtracking",
+          "domain": "https://ak-static.cms.nba.com"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "failed_all_attempts",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamtracking"
+        },
+        {
+          "status": "json_error",
+          "error": "Expecting value: line 1 column 1 (char 0)",
+          "endpoint": "leaguedashteamtracking"
+        }
+      ]
+    }
+  },
+  "summary": {
+    "total_target_endpoints": 6,
+    "working_endpoints": 0,
+    "working_endpoint_names": [],
+    "reverse_engineered_count": 8,
+    "graphql_working": 1,
+    "graphql_endpoints": [
+      "https://public-api.nbatopshot.com/graphql"
+    ],
+    "mobile_working": 0,
+    "mobile_endpoints": []
+  }
+}

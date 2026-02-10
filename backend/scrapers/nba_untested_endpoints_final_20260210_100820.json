@@ -1,0 +1,276 @@
+{
+  "final_assault_summary": {
+    "total_endpoints_tested": 12,
+    "successful_unlocks": 1,
+    "failed_tests": 11,
+    "overall_success_rate": 8.333333333333332,
+    "player_advanced_working": 1,
+    "team_advanced_working": 0,
+    "timestamp": "2026-02-10T10:08:20.967629"
+  },
+  "working_endpoints": [
+    {
+      "status": "SUCCESS",
+      "status_code": 200,
+      "record_count": 568,
+      "header_count": 20,
+      "headers": [
+        "PLAYER_ID",
+        "PLAYER_NAME",
+        "PLAYER_LAST_TEAM_ID",
+        "PLAYER_LAST_TEAM_ABBREVIATION",
+        "AGE",
+        "GP",
+        "G",
+        "FGA_FREQUENCY",
+        "FGM",
+        "FGA"
+      ],
+      "sample_data": [
+        [
+          1629029,
+          "Luka Don\u010di\u0107",
+          1610612742,
+          "DAL",
+          25.0,
+          69,
+          69,
+          1.0,
+          11.46,
+          23.58,
+          0.486,
+          0.572,
+          0.551,
+          7.41,
+          12.99,
+          0.57,
+          0.449,
+          4.06,
+          10.59,
+          0.383
+        ],
+        [
+          203954,
+          "Joel Embiid",
+          1610612755,
+          "PHI",
+          30.0,
+          39,
+          39,
+          1.0,
+          11.54,
+          21.82,
+          0.529,
+          0.561,
+          0.837,
+          10.15,
+          18.26,
+          0.556,
+          0.163,
+          1.38,
+          3.56,
+          0.388
+        ],
+        [
+          1628973,
+          "Jalen Brunson",
+          1610612752,
+          "NYK",
+          27.0,
+          77,
+          77,
+          1.0,
+          10.22,
+          21.31,
+          0.48,
+          0.544,
+          0.681,
+          7.49,
+          14.51,
+          0.517,
+          0.319,
+          2.73,
+          6.81,
+          0.401
+        ]
+      ],
+      "endpoint": "leaguedashplayerptshot",
+      "name": "Player Transition Tracking",
+      "category": "Player Advanced",
+      "description": "Player transition and shot tracking data",
+      "priority": "HIGH",
+      "test_timestamp": "2026-02-10T10:08:05.093006"
+    }
+  ],
+  "all_results": [
+    {
+      "status": "SUCCESS",
+      "status_code": 200,
+      "record_count": 568,
+      "header_count": 20,
+      "headers": [
+        "PLAYER_ID",
+        "PLAYER_NAME",
+        "PLAYER_LAST_TEAM_ID",
+        "PLAYER_LAST_TEAM_ABBREVIATION",
+        "AGE",
+        "GP",
+        "G",
+        "FGA_FREQUENCY",
+        "FGM",
+        "FGA"
+      ],
+      "sample_data": [
+        [
+          1629029,
+          "Luka Don\u010di\u0107",
+          1610612742,
+          "DAL",
+          25.0,
+          69,
+          69,
+          1.0,
+          11.46,
+          23.58,
+          0.486,
+          0.572,
+          0.551,
+          7.41,
+          12.99,
+          0.57,
+          0.449,
+          4.06,
+          10.59,
+          0.383
+        ],
+        [
+          203954,
+          "Joel Embiid",
+          1610612755,
+          "PHI",
+          30.0,
+          39,
+          39,
+          1.0,
+          11.54,
+          21.82,
+          0.529,
+          0.561,
+          0.837,
+          10.15,
+          18.26,
+          0.556,
+          0.163,
+          1.38,
+          3.56,
+          0.388
+        ],
+        [
+          1628973,
+          "Jalen Brunson",
+          1610612752,
+          "NYK",
+          27.0,
+          77,
+          77,
+          1.0,
+          10.22,
+          21.31,
+          0.48,
+          0.544,
+          0.681,
+          7.49,
+          14.51,
+          0.517,
+          0.319,
+          2.73,
+          6.81,
+          0.401
+        ]
+      ],
+      "endpoint": "leaguedashplayerptshot",
+      "name": "Player Transition Tracking",
+      "category": "Player Advanced",
+      "description": "Player transition and shot tracking data",
+      "priority": "HIGH",
+      "test_timestamp": "2026-02-10T10:08:05.093006"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashplayercatchshoot",
+      "name": "Player Catch & Shoot",
+      "test_timestamp": "2026-02-10T10:08:06.426526"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashplayershotchart",
+      "name": "Player Shot Chart",
+      "test_timestamp": "2026-02-10T10:08:07.731699"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashplayeropponent",
+      "name": "Player Opponent Shooting",
+      "test_timestamp": "2026-02-10T10:08:09.108482"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashplayerrebounds",
+      "name": "Player Rebounding Analytics",
+      "test_timestamp": "2026-02-10T10:08:10.467487"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashteamboxscores",
+      "name": "Team Box Scores",
+      "test_timestamp": "2026-02-10T10:08:11.882949"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashteamrebounds",
+      "name": "Team Rebounding Analytics",
+      "test_timestamp": "2026-02-10T10:08:13.154384"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashteamopponent",
+      "name": "Team Opponent Shooting",
+      "test_timestamp": "2026-02-10T10:08:14.891162"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashteamshotchart",
+      "name": "Team Shot Chart",
+      "test_timestamp": "2026-02-10T10:08:16.246642"
+    },
+    {
+      "status": "HTTP_404",
+      "status_code": 404,
+      "endpoint": "leaguedashteamcatchshoot",
+      "name": "Team Catch & Shoot",
+      "test_timestamp": "2026-02-10T10:08:17.651149"
+    },
+    {
+      "status": "HTTP_500",
+      "status_code": 500,
+      "endpoint": "leaguedashteamshotlocations",
+      "name": "Team Shot Locations",
+      "test_timestamp": "2026-02-10T10:08:18.803876"
+    },
+    {
+      "status": "HTTP_500",
+      "status_code": 500,
+      "endpoint": "leaguedashteamclutch",
+      "name": "Team Clutch Stats",
+      "test_timestamp": "2026-02-10T10:08:19.966329"
+    }
+  ]
+}

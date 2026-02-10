@@ -93,18 +93,59 @@ class BettingProsScraper(BaseScraper):
 
     async def scrape_nba_data(self):
         """Scrapes all NBA game lines and player props."""
-        # 1. Fetch Events with enhanced data
-        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+        # 1. Fetch Events for both today and tomorrow
+        from datetime import timedelta
+        
+        today = datetime.utcnow()
+        tomorrow = today + timedelta(days=1)
+        
+        all_events = []
+        
+        # Fetch today's events
+        today_str = today.strftime("%Y-%m-%d")
         events_data = self._get_api("events", {
             "sport": "NBA", 
             "date": today_str,
             "lineups": "true"
         })
-        if not events_data or not events_data.get("events"):
-            logger.warning(f"No events found for {today_str}")
+        if events_data and events_data.get("events"):
+            all_events.extend(events_data["events"])
+            logger.info(f"Found {len(events_data['events'])} events for today ({today_str})")
+        else:
+            logger.warning(f"No events found for today ({today_str})")
+        
+        # Fetch tomorrow's events
+        tomorrow_str = tomorrow.strftime("%Y-%m-%d")
+        events_data_tomorrow = self._get_api("events", {
+            "sport": "NBA", 
+            "date": tomorrow_str,
+            "lineups": "true"
+        })
+        if events_data_tomorrow and events_data_tomorrow.get("events"):
+            all_events.extend(events_data_tomorrow["events"])
+            logger.info(f"Found {len(events_data_tomorrow['events'])} events for tomorrow ({tomorrow_str})")
+        else:
+            logger.warning(f"No events found for tomorrow ({tomorrow_str})")
+        
+        # Fetch day after tomorrow's events
+        day_after_tomorrow = today + timedelta(days=2)
+        day_after_tomorrow_str = day_after_tomorrow.strftime("%Y-%m-%d")
+        events_data_day_after = self._get_api("events", {
+            "sport": "NBA", 
+            "date": day_after_tomorrow_str,
+            "lineups": "true"
+        })
+        if events_data_day_after and events_data_day_after.get("events"):
+            all_events.extend(events_data_day_after["events"])
+            logger.info(f"Found {len(events_data_day_after['events'])} events for day after tomorrow ({day_after_tomorrow_str})")
+        else:
+            logger.warning(f"No events found for day after tomorrow ({day_after_tomorrow_str})")
+        
+        if not all_events:
+            logger.warning("No events found for any of the three days")
             return
-
-        events_list = events_data["events"]
+        
+        events_list = all_events
         event_ids = [str(e["id"]) for e in events_list]
         event_ids_str = ":".join(event_ids)
 
@@ -147,10 +188,15 @@ class BettingProsScraper(BaseScraper):
                             logger.info(f"Updated {team.name} record to {record_str}")
                 
                 if home_team and away_team:
+                    # Look for games from today and tomorrow
+                    from datetime import timedelta
+                    today = datetime.utcnow().date()
+                    tomorrow = today + timedelta(days=1)
+                    
                     game = db.query(Game).filter(
                         Game.home_team_id == home_team.id,
                         Game.away_team_id == away_team.id,
-                        Game.game_date >= datetime.utcnow().date()
+                        Game.game_date >= today
                     ).first()
                     
                     # Update game venue if available
@@ -246,13 +292,28 @@ class BettingProsScraper(BaseScraper):
                 cost = line_data.get("cost")
 
                 if market_name == "moneyline":
-                    if sel_label == event_info["home"].lower() or sel_label == event_info.get("home_abbr", "").lower():
+                    # Check if selection label matches home team (partial match)
+                    home_team_name = event_info["home"].lower()
+                    home_abbr = event_info.get("home_abbr", "").lower()
+                    
+                    # Partial matching - check if selection is contained in team name or vice versa
+                    is_home = (sel_label in home_team_name or home_team_name in sel_label or 
+                              sel_label == home_abbr or sel_label == home_team_name)
+                    
+                    if is_home:
                         odds_data["home_moneyline"] = cost
                     else:
                         odds_data["away_moneyline"] = cost
                 elif market_name == "spread":
                     if "over" not in sel_label and "under" not in sel_label:
-                        is_home = (sel_label == event_info["home"].lower())
+                        # Check if selection label matches home team (partial match)
+                        home_team_name = event_info["home"].lower()
+                        home_abbr = event_info.get("home_abbr", "").lower()
+                        
+                        # Partial matching - check if selection is contained in team name or vice versa
+                        is_home = (sel_label in home_team_name or home_team_name in sel_label or 
+                                  sel_label == home_abbr or sel_label == home_team_name)
+                        
                         if is_home:
                             odds_data["home_spread"] = val
                             odds_data["home_spread_price"] = cost
@@ -311,7 +372,11 @@ class BettingProsScraper(BaseScraper):
             away_team = db.query(Team).filter(Team.name.ilike(f"%{data['away_team']}%")).first()
             if not home_team or not away_team: return
             
+            # Look for games from today and tomorrow
+            from datetime import timedelta
             today = datetime.utcnow().date()
+            tomorrow = today + timedelta(days=1)
+            
             # Get the MOST RECENT game (highest ID) to handle duplicate entries
             game = db.query(Game).filter(
                 Game.home_team_id == home_team.id, 
@@ -350,7 +415,11 @@ class BettingProsScraper(BaseScraper):
     def save_player_prop(self, player_name: str, prop_type: str, line: float, over_odds: int, under_odds: int, home_team_name: str):
         db = SessionLocal()
         try:
+            # Look for games from today and tomorrow
+            from datetime import timedelta
             today = datetime.utcnow().date()
+            tomorrow = today + timedelta(days=1)
+            
             game = db.query(Game).join(Team, Game.home_team_id == Team.id).filter(
                 Team.name.ilike(f"%{home_team_name}%"),
                 Game.game_date >= today

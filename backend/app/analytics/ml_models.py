@@ -9,6 +9,7 @@ import os
 import logging
 
 from app.models import Game, PlayerStats, TeamStats, BettingOdds, Team, MLModelMetadata, Player
+from app.models_nba_official import NBAOfficialPlayerStats
 from app.database import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,102 @@ class FeatureEngineer:
             "apg": df["assists"].mean()
         }
 
+    def get_team_hustle_defense_stats(self, team_id, season):
+        """Get aggregate hustle and defense stats for a team."""
+        # Map our team ID to NBA team ID
+        # This is a temporary hardcoded mapping until we add it to the database
+        nba_team_mapping = {
+            7: 1610612737,   # Atlanta Hawks
+            26: 1610612738,  # Boston Celtics
+            4: 1610612751,   # Brooklyn Nets
+            17: 1610612766,  # Charlotte Hornets
+            29: 1610612741,  # Chicago Bulls
+            9: 1610612739,   # Cleveland Cavaliers
+            14: 1610612742,  # Dallas Mavericks
+            24: 1610612743,  # Denver Nuggets
+            31: 1610612765,  # Detroit Pistons
+            28: 1610612744,  # Golden State Warriors
+            2: 1610612745,   # Houston Rockets
+            27: 1610612754,  # Indiana Pacers
+            32: 1610612746,  # Los Angeles Clippers
+            13: 1610612747,  # Los Angeles Lakers
+            5: 1610612763,   # Memphis Grizzlies
+            3: 1610612748,   # Miami Heat
+            11: 1610612749,  # Milwaukee Bucks
+            25: 1610612750,  # Minnesota Timberwolves
+            6: 1610612740,   # New Orleans Pelicans
+            10: 1610612752,  # New York Knicks
+            23: 1610612760,  # Oklahoma City Thunder
+            19: 1610612753,  # Orlando Magic
+            16: 1610612755,  # Philadelphia 76ers
+            8: 1610612756,   # Phoenix Suns
+            12: 1610612757,  # Portland Trail Blazers
+            1: 1610612758,   # Sacramento Kings
+            21: 1610612759,  # San Antonio Spurs
+            22: 1610612761,  # Toronto Raptors
+            15: 1610612762,  # Utah Jazz
+            30: 1610612764,  # Washington Wizards
+        }
+        
+        nba_team_id = nba_team_mapping.get(team_id)
+        
+        if not nba_team_id:
+            logger.warning(f"No NBA team ID mapping for team {team_id}")
+            return {
+                "team_deflections": 0,
+                "team_screen_assists": 0,
+                "team_contested_shots": 0,
+                "team_loose_balls": 0,
+                "team_charges_drawn": 0,
+                "team_defense_fg_diff": 0,
+                "hustle_score": 0
+            }
+            
+        # Get hustle stats for this team using the NBA team ID
+        hustle_stats = self.db.query(
+            func.sum(NBAOfficialPlayerStats.deflections).label("team_deflections"),
+            func.sum(NBAOfficialPlayerStats.screen_assists).label("team_screen_assists"),
+            func.sum(NBAOfficialPlayerStats.contested_shots).label("team_contested_shots"),
+            func.sum(NBAOfficialPlayerStats.loose_balls_recovered).label("team_loose_balls"),
+            func.sum(NBAOfficialPlayerStats.charges_drawn).label("team_charges_drawn"),
+            func.avg(NBAOfficialPlayerStats.defense_fg_percentage_diff).label("team_defense_fg_diff"),
+            func.count(NBAOfficialPlayerStats.player_id).label("players_with_stats")
+        ).filter(
+            NBAOfficialPlayerStats.team_id == nba_team_id,
+            NBAOfficialPlayerStats.season == season,
+            NBAOfficialPlayerStats.stat_type.in_(['hustle', 'defense'])
+        ).first()
+        
+        if not hustle_stats or hustle_stats.players_with_stats == 0:
+            return {
+                "team_deflections": 0,
+                "team_screen_assists": 0,
+                "team_contested_shots": 0,
+                "team_loose_balls": 0,
+                "team_charges_drawn": 0,
+                "team_defense_fg_diff": 0,
+                "hustle_score": 0  # Composite hustle metric
+            }
+        
+        # Calculate composite hustle score (higher is better)
+        hustle_score = (
+            (hustle_stats.team_deflections or 0) * 0.3 +
+            (hustle_stats.team_screen_assists or 0) * 0.25 +
+            (hustle_stats.team_contested_shots or 0) * 0.2 +
+            (hustle_stats.team_loose_balls or 0) * 0.15 +
+            (hustle_stats.team_charges_drawn or 0) * 0.1
+        )
+        
+        return {
+            "team_deflections": hustle_stats.team_deflections or 0,
+            "team_screen_assists": hustle_stats.team_screen_assists or 0,
+            "team_contested_shots": hustle_stats.team_contested_shots or 0,
+            "team_loose_balls": hustle_stats.team_loose_balls or 0,
+            "team_charges_drawn": hustle_stats.team_charges_drawn or 0,
+            "team_defense_fg_diff": hustle_stats.team_defense_fg_diff or 0,
+            "hustle_score": hustle_score
+        }
+
     def prepare_training_data(self):
         """
         Prepare dataset for Moneyline/Spread prediction.
@@ -60,12 +157,23 @@ class FeatureEngineer:
             home_stats = self.get_team_rolling_stats(game.home_team_id, game.game_date)
             away_stats = self.get_team_rolling_stats(game.away_team_id, game.game_date)
             
+            # Get hustle and defense stats for both teams
+            home_hustle = self.get_team_hustle_defense_stats(game.home_team_id, "2023-24")
+            away_hustle = self.get_team_hustle_defense_stats(game.away_team_id, "2023-24")
+            
             row = {
                 "home_ppg": home_stats["ppg"],
                 "away_ppg": away_stats["ppg"],
                 "home_rpg": home_stats["rpg"],
                 "away_rpg": away_stats["rpg"],
                 "is_home_conference_match": 1 if game.home_team.conference == game.away_team.conference else 0,
+                # New hustle and defense features
+                "home_hustle_score": home_hustle["hustle_score"],
+                "away_hustle_score": away_hustle["hustle_score"],
+                "home_defense_fg_diff": home_hustle["team_defense_fg_diff"],
+                "away_defense_fg_diff": away_hustle["team_defense_fg_diff"],
+                "home_contested_shots": home_hustle["team_contested_shots"],
+                "away_contested_shots": away_hustle["team_contested_shots"],
                 # Target
                 "target_home_win": 1 if game.home_score > game.away_score else 0,
                 "target_spread_margin": game.home_score - game.away_score
@@ -145,13 +253,24 @@ class NBAXGBoostModel:
         engineer = FeatureEngineer(db)
         home_stats = engineer.get_team_rolling_stats(game.home_team_id, game.game_date)
         away_stats = engineer.get_team_rolling_stats(game.away_team_id, game.game_date)
+        
+        # Get hustle and defense stats
+        home_hustle = engineer.get_team_hustle_defense_stats(game.home_team_id, "2023-24")
+        away_hustle = engineer.get_team_hustle_defense_stats(game.away_team_id, "2023-24")
 
         row = {
             "home_ppg": home_stats["ppg"],
             "away_ppg": away_stats["ppg"],
             "home_rpg": home_stats["rpg"],
             "away_rpg": away_stats["rpg"],
-            "is_home_conference_match": 1 if game.home_team.conference == game.away_team.conference else 0
+            "is_home_conference_match": 1 if game.home_team.conference == game.away_team.conference else 0,
+            # New hustle and defense features
+            "home_hustle_score": home_hustle["hustle_score"],
+            "away_hustle_score": away_hustle["hustle_score"],
+            "home_defense_fg_diff": home_hustle["team_defense_fg_diff"],
+            "away_defense_fg_diff": away_hustle["team_defense_fg_diff"],
+            "home_contested_shots": home_hustle["team_contested_shots"],
+            "away_contested_shots": away_hustle["team_contested_shots"]
         }
         df = pd.DataFrame([row])
 

@@ -1,0 +1,345 @@
+{
+  "timestamp": "2026-02-10T10:38:24.579204",
+  "strategy": "nuclear_warfare_v3",
+  "topshot_graphql": {
+    "player_stats": {
+      "status": "http_422",
+      "response": "{\"errors\":[{\"message\":\"Cannot query field \\\"player\\\" on type \\\"Query\\\".\",\"locations\":[{\"line\":3,\"column\":21}],\"extensions\":{\"code\":\"GRAPHQL_VALIDATION_FAILED\"}}],\"data\":null}"
+    },
+    "moment_data": {
+      "status": "http_422",
+      "response": "{\"errors\":[{\"message\":\"Cannot query field \\\"moment\\\" on type \\\"Query\\\".\",\"locations\":[{\"line\":3,\"column\":21}],\"extensions\":{\"code\":\"GRAPHQL_VALIDATION_FAILED\"}}],\"data\":null}"
+    },
+    "game_moments": {
+      "status": "http_422",
+      "response": "{\"errors\":[{\"message\":\"Cannot query field \\\"game\\\" on type \\\"Query\\\". Did you mean \\\"me\\\"?\",\"locations\":[{\"line\":3,\"column\":21}],\"extensions\":{\"code\":\"GRAPHQL_VALIDATION_FAILED\"}}],\"data\":null}"
+    }
+  },
+  "data_api": {
+    "/2023/players.json": {
+      "status": "exception",
+      "error": "HTTPSConnectionPool(host='data.nba.net', port=443): Max retries exceeded with url: /10s/prod/v1/2023/players.json (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'data.nba.net'. (_ssl.c:1017)\")))"
+    },
+    "/2023/teams.json": {
+      "status": "exception",
+      "error": "HTTPSConnectionPool(host='data.nba.net', port=443): Max retries exceeded with url: /10s/prod/v1/2023/teams.json (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'data.nba.net'. (_ssl.c:1017)\")))"
+    },
+    "/2023/games.json": {
+      "status": "exception",
+      "error": "HTTPSConnectionPool(host='data.nba.net', port=443): Max retries exceeded with url: /10s/prod/v1/2023/games.json (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'data.nba.net'. (_ssl.c:1017)\")))"
+    },
+    "/2023/standings.json": {
+      "status": "exception",
+      "error": "HTTPSConnectionPool(host='data.nba.net', port=443): Max retries exceeded with url: /10s/prod/v1/2023/standings.json (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'data.nba.net'. (_ssl.c:1017)\")))"
+    },
+    "/2023/leagueLeaders.json": {
+      "status": "exception",
+      "error": "HTTPSConnectionPool(host='data.nba.net', port=443): Max retries exceeded with url: /10s/prod/v1/2023/leagueLeaders.json (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'data.nba.net'. (_ssl.c:1017)\")))"
+    },
+    "/2023/scoreboard.json": {
+      "status": "exception",
+      "error": "HTTPSConnectionPool(host='data.nba.net', port=443): Max retries exceeded with url: /10s/prod/v1/2023/scoreboard.json (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'data.nba.net'. (_ssl.c:1017)\")))"
+    }
+  },
+  "cdn_api": {
+    "/scoreboard/today.json": {
+      "status": "http_403"
+    },
+    "/playoffs/bracket.json": {
+      "status": "http_403"
+    },
+    "/draft/draftHistory.json": {
+      "status": "http_403"
+    },
+    "/stats/league/leaders.json": {
+      "status": "http_403"
+    },
+    "/stats/alltime/leaders.json": {
+      "status": "http_403"
+    }
+  },
+  "mobile_api": {
+    "bearer_token": {
+      "/v1/stats": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v1/players": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v1/teams": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/advanced": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/clutch": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/tracking": {
+        "status": "requires_auth",
+        "status_code": 401
+      }
+    },
+    "api_key": {
+      "/v1/stats": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v1/players": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v1/teams": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/advanced": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/clutch": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/tracking": {
+        "status": "requires_auth",
+        "status_code": 401
+      }
+    },
+    "session_based": {
+      "/v1/stats": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v1/players": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v1/teams": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/advanced": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/clutch": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/tracking": {
+        "status": "requires_auth",
+        "status_code": 401
+      }
+    },
+    "oauth_simulation": {
+      "/v1/stats": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v1/players": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v1/teams": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/advanced": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/clutch": {
+        "status": "requires_auth",
+        "status_code": 401
+      },
+      "/v2/tracking": {
+        "status": "requires_auth",
+        "status_code": 401
+      }
+    }
+  },
+  "website_analysis": {
+    "https://cdn.nba.com/user-consent/index-gam.min.js": {
+      "status": "success",
+      "endpoints_found": [
+        "usprivacy",
+        "en",
+        "info",
+        "required"
+      ]
+    },
+    "/_next/static/chunks/pages/stats-70df6f09992ae565.js": {
+      "status": "no_endpoints_found"
+    },
+    "https://tags.nba.com/nba-web/prod/utag.js": {
+      "status": "no_endpoints_found"
+    }
+  },
+  "alternative_strategies": {
+    "clutch_data_alternatives": [
+      {
+        "status": "exception",
+        "alternative": {
+          "source": "play_by_play",
+          "description": "Extract clutch data from play-by-play logs (last 5 minutes, score within 5)",
+          "endpoint": "https://stats.nba.com/stats/playbyplayv2",
+          "params": {
+            "GameID": "0022300001",
+            "StartPeriod": 4,
+            "EndPeriod": 4
+          }
+        },
+        "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=10)"
+      },
+      {
+        "status": "exception",
+        "alternative": {
+          "source": "shot_chart",
+          "description": "Use shot chart data filtered by time/clutch situations",
+          "endpoint": "https://stats.nba.com/stats/shotchartdetail",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "ClutchTime": "Last 5 Minutes"
+          }
+        },
+        "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=10)"
+      },
+      {
+        "status": "exception",
+        "alternative": {
+          "source": "game_logs",
+          "description": "Calculate clutch performance from game logs and box scores",
+          "endpoint": "https://stats.nba.com/stats/leaguegamelog",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season"
+          }
+        },
+        "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=10)"
+      }
+    ],
+    "tracking_data_alternatives": [
+      {
+        "status": "exception",
+        "alternative": {
+          "source": "play_by_play_advanced",
+          "description": "Extract tracking-like data from detailed play-by-play",
+          "endpoint": "https://stats.nba.com/stats/playbyplayv2",
+          "params": {
+            "GameID": "0022300001",
+            "StartPeriod": 1,
+            "EndPeriod": 4
+          }
+        },
+        "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=10)"
+      },
+      {
+        "status": "exception",
+        "alternative": {
+          "source": "box_score_advanced",
+          "description": "Use advanced box score metrics as proxy for tracking data",
+          "endpoint": "https://stats.nba.com/stats/boxscoreadvancedv2",
+          "params": {
+            "GameID": "0022300001"
+          }
+        },
+        "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=10)"
+      }
+    ],
+    "shot_location_alternatives": [
+      {
+        "status": "exception",
+        "alternative": {
+          "source": "shot_chart_detail",
+          "description": "Use detailed shot chart for location data",
+          "endpoint": "https://stats.nba.com/stats/shotchartdetail",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season"
+          }
+        },
+        "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=10)"
+      },
+      {
+        "status": "exception",
+        "alternative": {
+          "source": "shot_dashboard",
+          "description": "Use shot dashboard for location-based analytics",
+          "endpoint": "https://stats.nba.com/stats/leaguedashplayershotlocations",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season"
+          }
+        },
+        "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=10)"
+      }
+    ]
+  },
+  "breakthrough_findings": [
+    "Mobile API - bearer_token - /v1/stats (needs auth)",
+    "Mobile API - bearer_token - /v1/players (needs auth)",
+    "Mobile API - bearer_token - /v1/teams (needs auth)",
+    "Mobile API - bearer_token - /v2/advanced (needs auth)",
+    "Mobile API - bearer_token - /v2/clutch (needs auth)",
+    "Mobile API - bearer_token - /v2/tracking (needs auth)",
+    "Mobile API - api_key - /v1/stats (needs auth)",
+    "Mobile API - api_key - /v1/players (needs auth)",
+    "Mobile API - api_key - /v1/teams (needs auth)",
+    "Mobile API - api_key - /v2/advanced (needs auth)",
+    "Mobile API - api_key - /v2/clutch (needs auth)",
+    "Mobile API - api_key - /v2/tracking (needs auth)",
+    "Mobile API - session_based - /v1/stats (needs auth)",
+    "Mobile API - session_based - /v1/players (needs auth)",
+    "Mobile API - session_based - /v1/teams (needs auth)",
+    "Mobile API - session_based - /v2/advanced (needs auth)",
+    "Mobile API - session_based - /v2/clutch (needs auth)",
+    "Mobile API - session_based - /v2/tracking (needs auth)",
+    "Mobile API - oauth_simulation - /v1/stats (needs auth)",
+    "Mobile API - oauth_simulation - /v1/players (needs auth)",
+    "Mobile API - oauth_simulation - /v1/teams (needs auth)",
+    "Mobile API - oauth_simulation - /v2/advanced (needs auth)",
+    "Mobile API - oauth_simulation - /v2/clutch (needs auth)",
+    "Mobile API - oauth_simulation - /v2/tracking (needs auth)"
+  ],
+  "summary": {
+    "total_breakthroughs": 24,
+    "topshot_graphql_successes": 0,
+    "data_api_successes": 0,
+    "cdn_api_successes": 0,
+    "alternative_strategy_successes": 0,
+    "mobile_api_potential": 24,
+    "breakthrough_findings": [
+      "Mobile API - bearer_token - /v1/stats (needs auth)",
+      "Mobile API - bearer_token - /v1/players (needs auth)",
+      "Mobile API - bearer_token - /v1/teams (needs auth)",
+      "Mobile API - bearer_token - /v2/advanced (needs auth)",
+      "Mobile API - bearer_token - /v2/clutch (needs auth)",
+      "Mobile API - bearer_token - /v2/tracking (needs auth)",
+      "Mobile API - api_key - /v1/stats (needs auth)",
+      "Mobile API - api_key - /v1/players (needs auth)",
+      "Mobile API - api_key - /v1/teams (needs auth)",
+      "Mobile API - api_key - /v2/advanced (needs auth)",
+      "Mobile API - api_key - /v2/clutch (needs auth)",
+      "Mobile API - api_key - /v2/tracking (needs auth)",
+      "Mobile API - session_based - /v1/stats (needs auth)",
+      "Mobile API - session_based - /v1/players (needs auth)",
+      "Mobile API - session_based - /v1/teams (needs auth)",
+      "Mobile API - session_based - /v2/advanced (needs auth)",
+      "Mobile API - session_based - /v2/clutch (needs auth)",
+      "Mobile API - session_based - /v2/tracking (needs auth)",
+      "Mobile API - oauth_simulation - /v1/stats (needs auth)",
+      "Mobile API - oauth_simulation - /v1/players (needs auth)",
+      "Mobile API - oauth_simulation - /v1/teams (needs auth)",
+      "Mobile API - oauth_simulation - /v2/advanced (needs auth)",
+      "Mobile API - oauth_simulation - /v2/clutch (needs auth)",
+      "Mobile API - oauth_simulation - /v2/tracking (needs auth)"
+    ]
+  }
+}

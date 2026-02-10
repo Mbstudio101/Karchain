@@ -1,0 +1,312 @@
+{
+  "test_timestamp": "2026-02-10T09:13:25.482680",
+  "total_endpoints_tested": 8,
+  "summary": {
+    "total_endpoints": 8,
+    "successful_endpoints": 2,
+    "failed_endpoints": 6,
+    "high_quality_endpoints": 2,
+    "medium_quality_endpoints": 0,
+    "low_quality_endpoints": 0,
+    "by_category": {
+      "player_traditional": {
+        "total": 1,
+        "successful": 0,
+        "failed": 1
+      },
+      "player_clutch": {
+        "total": 1,
+        "successful": 0,
+        "failed": 1
+      },
+      "player_shooting": {
+        "total": 1,
+        "successful": 0,
+        "failed": 1
+      },
+      "player_defense": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0
+      },
+      "player_tracking": {
+        "total": 1,
+        "successful": 0,
+        "failed": 1
+      },
+      "player_hustle": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0
+      },
+      "team_traditional": {
+        "total": 1,
+        "successful": 0,
+        "failed": 1
+      },
+      "team_hustle": {
+        "total": 1,
+        "successful": 0,
+        "failed": 1
+      }
+    },
+    "response_times": [
+      0.04341411590576172,
+      0.11595606803894043
+    ],
+    "most_reliable_endpoints": [
+      {
+        "endpoint": "leaguedashptdefend",
+        "description": "Player Defense Statistics",
+        "url_path": "/players/defense-dash-overall",
+        "category": "player_defense",
+        "status": "success",
+        "status_code": 200,
+        "data_quality": "high",
+        "record_count": 569,
+        "sample_data": {
+          "CLOSE_DEF_PERSON_ID": 201572,
+          "PLAYER_NAME": "Brook Lopez",
+          "PLAYER_LAST_TEAM_ID": 1610612749,
+          "PLAYER_LAST_TEAM_ABBREVIATION": "MIL",
+          "PLAYER_POSITION": "C",
+          "AGE": 36.0,
+          "GP": 79,
+          "G": 79,
+          "FREQ": 1.0,
+          "D_FGM": 835,
+          "D_FGA": 1751,
+          "D_FG_PCT": 0.477,
+          "NORMAL_FG_PCT": 0.498,
+          "PCT_PLUSMINUS": -0.021
+        },
+        "error": "Impersonating firefox121 is not supported",
+        "response_time": 0.04341411590576172,
+        "key_stats_found": [
+          "PLAYER_NAME"
+        ]
+      },
+      {
+        "endpoint": "leaguehustlestatsplayer",
+        "description": "Player Hustle Statistics",
+        "url_path": "/players/hustle",
+        "category": "player_hustle",
+        "status": "success",
+        "status_code": 200,
+        "data_quality": "high",
+        "record_count": 567,
+        "sample_data": {
+          "PLAYER_ID": 1630639,
+          "PLAYER_NAME": "A.J. Lawson",
+          "TEAM_ID": 1610612742,
+          "TEAM_ABBREVIATION": "DAL",
+          "AGE": 23.0,
+          "G": 23,
+          "MIN": 268.0,
+          "CONTESTED_SHOTS": 40,
+          "CONTESTED_SHOTS_2PT": 27,
+          "CONTESTED_SHOTS_3PT": 13,
+          "DEFLECTIONS": 12,
+          "CHARGES_DRAWN": 0,
+          "SCREEN_ASSISTS": 8,
+          "SCREEN_AST_PTS": 17,
+          "OFF_LOOSE_BALLS_RECOVERED": 2,
+          "DEF_LOOSE_BALLS_RECOVERED": 5,
+          "LOOSE_BALLS_RECOVERED": 7,
+          "PCT_LOOSE_BALLS_RECOVERED_OFF": 0.286,
+          "PCT_LOOSE_BALLS_RECOVERED_DEF": 0.714,
+          "OFF_BOXOUTS": 0,
+          "DEF_BOXOUTS": 5,
+          "BOX_OUT_PLAYER_TEAM_REBS": 4,
+          "BOX_OUT_PLAYER_REBS": 2,
+          "BOX_OUTS": 5,
+          "PCT_BOX_OUTS_OFF": 0.0,
+          "PCT_BOX_OUTS_DEF": 1.0,
+          "PCT_BOX_OUTS_TEAM_REB": 0.8,
+          "PCT_BOX_OUTS_REB": 0.4
+        },
+        "error": "Impersonating firefox121 is not supported",
+        "response_time": 0.11595606803894043,
+        "key_stats_found": [
+          "PLAYER_NAME",
+          "TEAM_ABBREVIATION",
+          "SCREEN_ASSISTS",
+          "SCREEN_AST_PTS",
+          "LOOSE_BALLS_RECOVERED",
+          "CHARGES_DRAWN",
+          "DEFLECTIONS"
+        ]
+      }
+    ],
+    "highest_data_quality": [],
+    "avg_response_time": 0.07968509197235107
+  },
+  "detailed_results": [
+    {
+      "endpoint": "leaguedashplayerstats",
+      "description": "Traditional Player Statistics",
+      "url_path": "/players/traditional",
+      "category": "player_traditional",
+      "status": "failed",
+      "status_code": 500,
+      "data_quality": null,
+      "record_count": 0,
+      "sample_data": null,
+      "error": "HTTP 500",
+      "response_time": 0.11320710182189941,
+      "key_stats_found": []
+    },
+    {
+      "endpoint": "leaguedashplayerclutch",
+      "description": "Player Clutch Statistics",
+      "url_path": "/players/clutch-traditional",
+      "category": "player_clutch",
+      "status": "failed",
+      "status_code": 500,
+      "data_quality": null,
+      "record_count": 0,
+      "sample_data": null,
+      "error": "Impersonating firefox121 is not supported",
+      "response_time": 0.10767102241516113,
+      "key_stats_found": []
+    },
+    {
+      "endpoint": "leaguedashplayershotlocations",
+      "description": "Player Shot Locations",
+      "url_path": "/players/shots-general",
+      "category": "player_shooting",
+      "status": "failed",
+      "status_code": 500,
+      "data_quality": null,
+      "record_count": 0,
+      "sample_data": null,
+      "error": "HTTP 500",
+      "response_time": 0.12236404418945312,
+      "key_stats_found": []
+    },
+    {
+      "endpoint": "leaguedashptdefend",
+      "description": "Player Defense Statistics",
+      "url_path": "/players/defense-dash-overall",
+      "category": "player_defense",
+      "status": "success",
+      "status_code": 200,
+      "data_quality": "high",
+      "record_count": 569,
+      "sample_data": {
+        "CLOSE_DEF_PERSON_ID": 201572,
+        "PLAYER_NAME": "Brook Lopez",
+        "PLAYER_LAST_TEAM_ID": 1610612749,
+        "PLAYER_LAST_TEAM_ABBREVIATION": "MIL",
+        "PLAYER_POSITION": "C",
+        "AGE": 36.0,
+        "GP": 79,
+        "G": 79,
+        "FREQ": 1.0,
+        "D_FGM": 835,
+        "D_FGA": 1751,
+        "D_FG_PCT": 0.477,
+        "NORMAL_FG_PCT": 0.498,
+        "PCT_PLUSMINUS": -0.021
+      },
+      "error": "Impersonating firefox121 is not supported",
+      "response_time": 0.04341411590576172,
+      "key_stats_found": [
+        "PLAYER_NAME"
+      ]
+    },
+    {
+      "endpoint": "leaguedashptstats",
+      "description": "Player Tracking Statistics",
+      "url_path": "/players/transition",
+      "category": "player_tracking",
+      "status": "failed",
+      "status_code": 500,
+      "data_quality": null,
+      "record_count": 0,
+      "sample_data": null,
+      "error": "HTTP 500",
+      "response_time": 0.10065722465515137,
+      "key_stats_found": []
+    },
+    {
+      "endpoint": "leaguehustlestatsplayer",
+      "description": "Player Hustle Statistics",
+      "url_path": "/players/hustle",
+      "category": "player_hustle",
+      "status": "success",
+      "status_code": 200,
+      "data_quality": "high",
+      "record_count": 567,
+      "sample_data": {
+        "PLAYER_ID": 1630639,
+        "PLAYER_NAME": "A.J. Lawson",
+        "TEAM_ID": 1610612742,
+        "TEAM_ABBREVIATION": "DAL",
+        "AGE": 23.0,
+        "G": 23,
+        "MIN": 268.0,
+        "CONTESTED_SHOTS": 40,
+        "CONTESTED_SHOTS_2PT": 27,
+        "CONTESTED_SHOTS_3PT": 13,
+        "DEFLECTIONS": 12,
+        "CHARGES_DRAWN": 0,
+        "SCREEN_ASSISTS": 8,
+        "SCREEN_AST_PTS": 17,
+        "OFF_LOOSE_BALLS_RECOVERED": 2,
+        "DEF_LOOSE_BALLS_RECOVERED": 5,
+        "LOOSE_BALLS_RECOVERED": 7,
+        "PCT_LOOSE_BALLS_RECOVERED_OFF": 0.286,
+        "PCT_LOOSE_BALLS_RECOVERED_DEF": 0.714,
+        "OFF_BOXOUTS": 0,
+        "DEF_BOXOUTS": 5,
+        "BOX_OUT_PLAYER_TEAM_REBS": 4,
+        "BOX_OUT_PLAYER_REBS": 2,
+        "BOX_OUTS": 5,
+        "PCT_BOX_OUTS_OFF": 0.0,
+        "PCT_BOX_OUTS_DEF": 1.0,
+        "PCT_BOX_OUTS_TEAM_REB": 0.8,
+        "PCT_BOX_OUTS_REB": 0.4
+      },
+      "error": "Impersonating firefox121 is not supported",
+      "response_time": 0.11595606803894043,
+      "key_stats_found": [
+        "PLAYER_NAME",
+        "TEAM_ABBREVIATION",
+        "SCREEN_ASSISTS",
+        "SCREEN_AST_PTS",
+        "LOOSE_BALLS_RECOVERED",
+        "CHARGES_DRAWN",
+        "DEFLECTIONS"
+      ]
+    },
+    {
+      "endpoint": "leaguedashteamstats",
+      "description": "Traditional Team Statistics",
+      "url_path": "/teams/traditional",
+      "category": "team_traditional",
+      "status": "failed",
+      "status_code": 500,
+      "data_quality": null,
+      "record_count": 0,
+      "sample_data": null,
+      "error": "HTTP 500",
+      "response_time": 0.10900568962097168,
+      "key_stats_found": []
+    },
+    {
+      "endpoint": "leaguehustlestatsteam",
+      "description": "Team Hustle Statistics",
+      "url_path": "/teams/hustle",
+      "category": "team_hustle",
+      "status": "failed",
+      "status_code": 500,
+      "data_quality": null,
+      "record_count": 0,
+      "sample_data": null,
+      "error": "Impersonating firefox121 is not supported",
+      "response_time": 0.10324287414550781,
+      "key_stats_found": []
+    }
+  ]
+}

@@ -1,0 +1,824 @@
+{
+  "leaguedashplayerclutch": {
+    "endpoint": "Clutch Stats",
+    "endpoint_url": "leaguedashplayerclutch",
+    "total_attempts": 40,
+    "successful_attempts": 0,
+    "success_rate": 0.0,
+    "best_result": null,
+    "all_results": [
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:51.456343"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:02:51.609737"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:02:51.757224"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:51.895197"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:02:52.052954"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "Per36",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:02:52.218562"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "Per100Possessions",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:02:52.401521"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Advanced"
+        },
+        "timestamp": "2026-02-10T10:02:52.557569"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Misc"
+        },
+        "timestamp": "2026-02-10T10:02:53.884400"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Scoring"
+        },
+        "timestamp": "2026-02-10T10:02:54.048398"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:54.177566"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:02:55.410748"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:02:55.542009"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:55.688796"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:02:55.824311"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "Per36",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:02:55.960338"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "Per100Possessions",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:02:56.110352"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Advanced"
+        },
+        "timestamp": "2026-02-10T10:02:56.261153"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Misc"
+        },
+        "timestamp": "2026-02-10T10:02:56.402702"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Scoring"
+        },
+        "timestamp": "2026-02-10T10:02:56.542231"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:57.097498"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:02:57.390842"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:02:57.531575"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayerclutch",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:57.740675"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayerclutch",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:02:57.894326"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:57.966224"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:02:58.040462"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:02:58.104572"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayerclutch",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:58.164638"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayerclutch",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:02:58.225867"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:02:59.145135"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:02:59.683667"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:02:59.963254"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayerclutch",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:00.315200"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayerclutch",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:00.725725"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:00.832403"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:03:00.905140"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayerclutch",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:03:01.053110"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayerclutch",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:01.167463"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayerclutch",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:01.227086"
+      }
+    ],
+    "timestamp": "2026-02-10T10:03:01.227115"
+  },
+  "leaguedashplayershotlocations": {
+    "endpoint": "Shot Locations",
+    "endpoint_url": "leaguedashplayershotlocations",
+    "total_attempts": 40,
+    "successful_attempts": 0,
+    "success_rate": 0.0,
+    "best_result": null,
+    "all_results": [
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:03.367635"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:03:05.569594"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:03:05.702148"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:05.823124"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:05.951947"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "Per36",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:06.089031"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "Per100Possessions",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:06.220711"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Advanced"
+        },
+        "timestamp": "2026-02-10T10:03:06.356012"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Misc"
+        },
+        "timestamp": "2026-02-10T10:03:06.563135"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Chrome 120 Windows (Latest)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Scoring"
+        },
+        "timestamp": "2026-02-10T10:03:06.698822"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:06.823840"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:03:06.961725"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:03:07.099765"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:07.229639"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:07.363325"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "Per36",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:07.552303"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "Per100Possessions",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:07.684270"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Advanced"
+        },
+        "timestamp": "2026-02-10T10:03:07.818122"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Misc"
+        },
+        "timestamp": "2026-02-10T10:03:07.944711"
+      },
+      {
+        "status": "FAILED_500",
+        "status_code": 500,
+        "browser": "Safari 17 Mac (Mobile)",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Scoring"
+        },
+        "timestamp": "2026-02-10T10:03:08.100521"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:08.538735"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:03:08.735778"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:03:08.853253"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:08.980595"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://cdn.nba.com/static/json/leaguedashplayershotlocations",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:09.186439"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:09.226138"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:03:09.320444"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:03:09.460721"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:09.501811"
+      },
+      {
+        "status": "ALT_EXCEPTION",
+        "error": "Failed to perform, curl: (60) SSL: no alternative certificate subject name matches target hostname 'data.nba.net'. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.",
+        "alternative_url": "https://data.nba.net/10s/prod/v1/leaguedashplayershotlocations",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:09.539006"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:09.856633"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:03:10.174519"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:03:10.474108"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:10.761777"
+      },
+      {
+        "status": "ALT_FAILED_404",
+        "status_code": 404,
+        "alternative_url": "https://stats.nba.com/js/data/leaguedashplayershotlocations",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:11.083050"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:11.141301"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Playoffs"
+        },
+        "timestamp": "2026-02-10T10:03:11.215389"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2023-24",
+          "SeasonType": "Pre Season"
+        },
+        "timestamp": "2026-02-10T10:03:11.265399"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayershotlocations",
+        "params": {
+          "Season": "2022-23",
+          "SeasonType": "Regular Season"
+        },
+        "timestamp": "2026-02-10T10:03:11.333764"
+      },
+      {
+        "status": "ALT_FAILED_403",
+        "status_code": 403,
+        "alternative_url": "https://ak-static.cms.nba.com/wp-content/uploads/leaguedashplayershotlocations",
+        "params": {
+          "PerMode": "PerGame",
+          "MeasureType": "Base"
+        },
+        "timestamp": "2026-02-10T10:03:11.498734"
+      }
+    ],
+    "timestamp": "2026-02-10T10:03:11.498770"
+  }
+}

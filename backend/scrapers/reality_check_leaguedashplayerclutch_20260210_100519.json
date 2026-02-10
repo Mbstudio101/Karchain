@@ -1,0 +1,12 @@
+{
+  "page_findings": {
+    "page": "Players Clutch Traditional",
+    "url": "https://www.nba.com/stats/players/clutch-traditional",
+    "missing_endpoint": "leaguedashplayerclutch",
+    "status": "ERROR",
+    "error": "name 'script_data_clues' is not defined",
+    "endpoints_found": [],
+    "timestamp": "2026-02-10T10:05:19.274375"
+  },
+  "timestamp": "2026-02-10T10:05:19.274406"
+}

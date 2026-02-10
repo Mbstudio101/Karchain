@@ -85,9 +85,9 @@ def read_games(
         joinedload(models.Game.recommendations)
     ).filter(
         models.Game.game_date >= start_utc,
-        models.Game.game_date < end_utc
+        models.Game.game_date < end_utc,
+        has_odds  # Only return games that have betting odds
     ).order_by(
-        case((has_odds, 0), else_=1),
         models.Game.game_date.asc()
     ).offset(skip).limit(limit).all()
 

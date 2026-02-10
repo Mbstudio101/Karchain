@@ -1,0 +1,9 @@
+endpoint,description,category,status,status_code,data_quality,record_count,response_time,key_stats_found,error
+leaguedashplayerstats,Traditional Player Statistics,player_traditional,failed,500,,0,0.11320710182189941,0,HTTP 500
+leaguedashplayerclutch,Player Clutch Statistics,player_clutch,failed,500,,0,0.10767102241516113,0,Impersonating firefox121 is not supported
+leaguedashplayershotlocations,Player Shot Locations,player_shooting,failed,500,,0,0.12236404418945312,0,HTTP 500
+leaguedashptdefend,Player Defense Statistics,player_defense,success,200,high,569,0.04341411590576172,1,Impersonating firefox121 is not supported
+leaguedashptstats,Player Tracking Statistics,player_tracking,failed,500,,0,0.10065722465515137,0,HTTP 500
+leaguehustlestatsplayer,Player Hustle Statistics,player_hustle,success,200,high,567,0.11595606803894043,7,Impersonating firefox121 is not supported
+leaguedashteamstats,Traditional Team Statistics,team_traditional,failed,500,,0,0.10900568962097168,0,HTTP 500
+leaguehustlestatsteam,Team Hustle Statistics,team_hustle,failed,500,,0,0.10324287414550781,0,Impersonating firefox121 is not supported

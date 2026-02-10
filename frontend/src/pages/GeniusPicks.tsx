@@ -1,33 +1,8 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api";
+import { fetchGeniusPicks } from "../api";
 import { Brain, Flame, Snowflake, RefreshCw, Award } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface GeniusPick {
-    player: string;
-    prop: string;
-    line: number;
-    pick: string;
-    odds: number;
-    ev: string;
-    edge: string;
-    kelly_bet: string;
-    hit_rate: string;
-    streak: string;
-    confidence_range: string;
-    grade: string;
-}
-
-interface GeniusPicksResponse {
-    genius_count: number;
-    picks: GeniusPick[];
-}
-
-const fetchGeniusPicks = async (): Promise<GeniusPicksResponse> => {
-    const { data } = await api.get<GeniusPicksResponse>("/recommendations/genius-picks");
-    return data;
-};
 
 export const GeniusPicksPage: React.FC = () => {
     const { data, isLoading, refetch, isFetching } = useQuery({
@@ -43,10 +18,14 @@ export const GeniusPicksPage: React.FC = () => {
     };
 
     const getGradeColor = (grade: string) => {
+        if (grade === "S") return "from-amber-300 to-red-500";
         if (grade === "A+") return "from-yellow-400 to-orange-500";
-        return "from-emerald-400 to-emerald-600";
+        if (grade === "A") return "from-emerald-400 to-emerald-600";
+        if (grade === "B+") return "from-blue-400 to-blue-600";
+        return "from-gray-400 to-gray-600";
     };
 
+    const sCount = data?.picks.filter(p => p.grade === "S").length || 0;
     const aPlusCount = data?.picks.filter(p => p.grade === "A+").length || 0;
     const aCount = data?.picks.filter(p => p.grade === "A").length || 0;
 
@@ -74,11 +53,17 @@ export const GeniusPicksPage: React.FC = () => {
             </div>
 
             {/* Stats Bar */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div className="bg-card border border-white/10 rounded-xl p-4">
                     <div className="text-xs text-muted uppercase tracking-wider mb-1">Total Picks</div>
                     <div className="text-3xl font-bold text-white">{data?.genius_count || 0}</div>
                 </div>
+                {sCount > 0 && (
+                    <div className="bg-gradient-to-br from-amber-500/10 to-red-500/10 border border-amber-500/20 rounded-xl p-4">
+                        <div className="text-xs text-amber-400 uppercase tracking-wider mb-1">S Grade</div>
+                        <div className="text-3xl font-bold text-amber-400">{sCount}</div>
+                    </div>
+                )}
                 <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl p-4">
                     <div className="text-xs text-yellow-400 uppercase tracking-wider mb-1">A+ Grade</div>
                     <div className="text-3xl font-bold text-yellow-400">{aPlusCount}</div>

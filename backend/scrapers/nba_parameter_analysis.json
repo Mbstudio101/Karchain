@@ -1,0 +1,444 @@
+{
+  "summary": {
+    "total_endpoints": 4,
+    "endpoints_with_success": 0,
+    "endpoints_fully_failed": 4,
+    "overall_success_rate": 0.0,
+    "breakthrough_endpoints": []
+  },
+  "detailed_analysis": {
+    "leaguedashplayerclutch": {
+      "endpoint": "leaguedashplayerclutch",
+      "total_tests": 11,
+      "successful": 0,
+      "failed": 11,
+      "success_rate": 0.0,
+      "successful_combinations": [],
+      "failed_combinations": [
+        {
+          "status_code": 500,
+          "description": "Variation 1: ['Season', 'SeasonType', 'LeagueID', 'PerMode']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 2: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 5 Minutes"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 3: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 2 Minutes"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 4: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 1 Minute"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 5: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime', 'PointDiff']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 5 Minutes",
+            "PointDiff": 3
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 6: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime', 'PointDiff']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 5 Minutes",
+            "PointDiff": 5
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 7: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime', 'PointDiff']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 5 Minutes",
+            "PointDiff": 10
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 8: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime', 'PointDiff', 'AheadBehind']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 5 Minutes",
+            "PointDiff": 5,
+            "AheadBehind": "Ahead"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 9: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime', 'PointDiff', 'AheadBehind']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 5 Minutes",
+            "PointDiff": 5,
+            "AheadBehind": "Behind"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 10: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'ClutchTime', 'PointDiff', 'AheadBehind']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "ClutchTime": "Last 5 Minutes",
+            "PointDiff": 5,
+            "AheadBehind": "Ahead or Behind"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 11: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'MeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "MeasureType": "Base"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        }
+      ],
+      "recommended_params": null
+    },
+    "leaguedashplayershotlocations": {
+      "endpoint": "leaguedashplayershotlocations",
+      "total_tests": 6,
+      "successful": 0,
+      "failed": 6,
+      "success_rate": 0.0,
+      "successful_combinations": [],
+      "failed_combinations": [
+        {
+          "status_code": 500,
+          "description": "Variation 1: ['Season', 'SeasonType', 'LeagueID', 'PerMode']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 2: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'DistanceRange']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "DistanceRange": "5ft Range"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 3: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'DistanceRange']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "DistanceRange": "8ft Range"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 4: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'DistanceRange']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "DistanceRange": "By Zone"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 5: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'MeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "MeasureType": "Base"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 6: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'MeasureType', 'DistanceRange']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "MeasureType": "Base",
+            "DistanceRange": "5ft Range"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        }
+      ],
+      "recommended_params": null
+    },
+    "leaguedashptstats": {
+      "endpoint": "leaguedashptstats",
+      "total_tests": 7,
+      "successful": 0,
+      "failed": 7,
+      "success_rate": 0.0,
+      "successful_combinations": [],
+      "failed_combinations": [
+        {
+          "status_code": 500,
+          "description": "Variation 1: ['Season', 'SeasonType', 'LeagueID', 'PerMode']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "PerGame"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 2: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'PtMeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "PerGame",
+            "PtMeasureType": "Transition"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 3: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'PtMeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "PerGame",
+            "PtMeasureType": "SpeedDistance"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 4: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'PtMeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "PerGame",
+            "PtMeasureType": "Rebounding"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 5: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'PtMeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "PerGame",
+            "PtMeasureType": "Possessions"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 6: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'MeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "PerGame",
+            "MeasureType": "Base"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 7: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'PtMeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "PtMeasureType": "Transition"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        }
+      ],
+      "recommended_params": null
+    },
+    "leaguedashteamstats": {
+      "endpoint": "leaguedashteamstats",
+      "total_tests": 5,
+      "successful": 0,
+      "failed": 5,
+      "success_rate": 0.0,
+      "successful_combinations": [],
+      "failed_combinations": [
+        {
+          "status_code": 500,
+          "description": "Variation 1: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'MeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "MeasureType": "Base"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 2: ['Season', 'SeasonType', 'LeagueID', 'PerMode']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 3: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'MeasureType']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "PerGame",
+            "MeasureType": "Base"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 4: ['Season', 'SeasonType', 'LeagueID']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00"
+          },
+          "success": false,
+          "error": "HTTP 500"
+        },
+        {
+          "status_code": 500,
+          "description": "Variation 5: ['Season', 'SeasonType', 'LeagueID', 'PerMode', 'MeasureType', 'LastNGames', 'Month', 'OpponentTeamID', 'PORound', 'Period', 'VsConference', 'VsDivision']",
+          "params": {
+            "Season": "2023-24",
+            "SeasonType": "Regular Season",
+            "LeagueID": "00",
+            "PerMode": "Totals",
+            "MeasureType": "Base",
+            "LastNGames": 0,
+            "Month": 0,
+            "OpponentTeamID": 0,
+            "PORound": 0,
+            "Period": 0,
+            "VsConference": "",
+            "VsDivision": ""
+          },
+          "success": false,
+          "error": "HTTP 500"
+        }
+      ],
+      "recommended_params": null
+    }
+  },
+  "timestamp": "2026-02-10T09:45:12.129807"
+}

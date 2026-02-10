@@ -1,0 +1,700 @@
+{
+  "endpoint_analysis": {
+    "leaguedashplayerclutch": {
+      "original_endpoint": "leaguedashplayerclutch",
+      "variations_tested": [
+        {
+          "endpoint": "leaguedashplayerclutch",
+          "status_code": 500,
+          "url": "https://stats.nba.com/stats/leaguedashplayerclutch",
+          "success": false
+        },
+        {
+          "endpoint": "leaguedashplayerclutchstats",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/leaguedashplayerclutchstats",
+          "success": false
+        },
+        {
+          "endpoint": "playerclutch",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/playerclutch",
+          "success": false
+        },
+        {
+          "endpoint": "clutchstats",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/clutchstats",
+          "success": false
+        },
+        {
+          "endpoint": "playerclutchstats",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/playerclutchstats",
+          "success": false
+        }
+      ],
+      "working_variations": [],
+      "best_variation": null,
+      "season_analysis": {
+        "endpoint": "leaguedashplayerclutch",
+        "season_tests": [
+          {
+            "season": "2023-24",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2022-23",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2021-22",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2020-21",
+            "status_code": 500,
+            "success": false
+          }
+        ],
+        "working_seasons": [],
+        "conclusion": "Endpoint appears deprecated"
+      }
+    },
+    "leaguedashplayershotlocations": {
+      "original_endpoint": "leaguedashplayershotlocations",
+      "variations_tested": [
+        {
+          "endpoint": "leaguedashplayershotlocations",
+          "status_code": 500,
+          "url": "https://stats.nba.com/stats/leaguedashplayershotlocations",
+          "success": false
+        },
+        {
+          "endpoint": "playershotlocations",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/playershotlocations",
+          "success": false
+        },
+        {
+          "endpoint": "shotlocations",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/shotlocations",
+          "success": false
+        },
+        {
+          "endpoint": "leaguedashshotlocations",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/leaguedashshotlocations",
+          "success": false
+        },
+        {
+          "endpoint": "playershooting",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/playershooting",
+          "success": false
+        }
+      ],
+      "working_variations": [],
+      "best_variation": null,
+      "season_analysis": {
+        "endpoint": "leaguedashplayershotlocations",
+        "season_tests": [
+          {
+            "season": "2023-24",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2022-23",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2021-22",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2020-21",
+            "status_code": 500,
+            "success": false
+          }
+        ],
+        "working_seasons": [],
+        "conclusion": "Endpoint appears deprecated"
+      }
+    },
+    "leaguedashptstats": {
+      "original_endpoint": "leaguedashptstats",
+      "variations_tested": [
+        {
+          "endpoint": "leaguedashptstats",
+          "status_code": 500,
+          "url": "https://stats.nba.com/stats/leaguedashptstats",
+          "success": false
+        },
+        {
+          "endpoint": "ptstats",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/ptstats",
+          "success": false
+        },
+        {
+          "endpoint": "playertrackingstats",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/playertrackingstats",
+          "success": false
+        },
+        {
+          "endpoint": "leaguedashplayertracking",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/leaguedashplayertracking",
+          "success": false
+        }
+      ],
+      "working_variations": [],
+      "best_variation": null,
+      "season_analysis": {
+        "endpoint": "leaguedashptstats",
+        "season_tests": [
+          {
+            "season": "2023-24",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2022-23",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2021-22",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2020-21",
+            "status_code": 500,
+            "success": false
+          }
+        ],
+        "working_seasons": [],
+        "conclusion": "Endpoint appears deprecated"
+      }
+    },
+    "leaguedashteamstats": {
+      "original_endpoint": "leaguedashteamstats",
+      "variations_tested": [
+        {
+          "endpoint": "leaguedashteamstats",
+          "status_code": 500,
+          "url": "https://stats.nba.com/stats/leaguedashteamstats",
+          "success": false
+        },
+        {
+          "endpoint": "teamstats",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/teamstats",
+          "success": false
+        },
+        {
+          "endpoint": "leagueteamstats",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/leagueteamstats",
+          "success": false
+        },
+        {
+          "endpoint": "dashteamstats",
+          "status_code": 404,
+          "url": "https://stats.nba.com/stats/dashteamstats",
+          "success": false
+        }
+      ],
+      "working_variations": [],
+      "best_variation": null,
+      "season_analysis": {
+        "endpoint": "leaguedashteamstats",
+        "season_tests": [
+          {
+            "season": "2023-24",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2022-23",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2021-22",
+            "status_code": 500,
+            "success": false
+          },
+          {
+            "season": "2020-21",
+            "status_code": 500,
+            "success": false
+          }
+        ],
+        "working_seasons": [],
+        "conclusion": "Endpoint appears deprecated"
+      }
+    },
+    "website_analysis": {
+      "pages_checked": [
+        {
+          "page": "https://www.nba.com/stats/players/clutch",
+          "status": "HTTP 404"
+        },
+        {
+          "page": "https://www.nba.com/stats/players/shooting",
+          "status": "found",
+          "endpoints_found": [
+            "players/shooting",
+            "players/boxscores",
+            "teams/shooting",
+            "teams/hustle",
+            "players/traditional",
+            "players/bio",
+            "teams/box-outs",
+            "draft/combine",
+            "players/drives",
+            "tools/media-central-game-stats",
+            "help/glossary",
+            "help/statminimums",
+            "teams/defense-dash-overall",
+            "spotlightarchive",
+            "help/faq",
+            "players/defense-dash-overall",
+            "teams/boxscores",
+            "players/advanced-leaders",
+            "teams/preseason",
+            "players/clutch-traditional",
+            "fantasynews",
+            "draft/combine-anthro",
+            "alltime",
+            "help/videostatus",
+            "draft/combine-strength-agility",
+            "leaders",
+            "players/transition",
+            "teams/transition",
+            "draft/combine-shooting-drills",
+            "cumestats",
+            "gamebooks",
+            "players/shots-general",
+            "players/isolation",
+            "players/hustle",
+            "featuredarchive",
+            "players/opponent-shooting",
+            "teams/catch-shoot",
+            "help",
+            "players/catch-shoot",
+            "players/dunk-scores",
+            "teams/shots-general",
+            "players",
+            "teams/opponent-shooting",
+            "history",
+            "players/boxscores-traditional",
+            "teams/clutch-traditional",
+            "draft/history",
+            "players/hustle-leaders",
+            "teams",
+            "lineups/lineups-tool",
+            "alltime-leaders",
+            "teams/boxscores-traditional",
+            "teams/traditional",
+            "players/box-outs",
+            "lineups/traditional",
+            "quicklinks"
+          ],
+          "content_length": 286556
+        },
+        {
+          "page": "https://www.nba.com/stats/players/tracking",
+          "status": "HTTP 404"
+        },
+        {
+          "page": "https://www.nba.com/stats/teams/traditional",
+          "status": "found",
+          "endpoints_found": [
+            "players/shooting",
+            "teams/traditional/",
+            "teams/advanced",
+            "players/boxscores",
+            "teams/shooting",
+            "teams/hustle",
+            "players/traditional",
+            "teams/scoring",
+            "teams/estimated-advanced",
+            "players/bio",
+            "teams/box-outs",
+            "draft/combine",
+            "teams/defense",
+            "tools/media-central-game-stats",
+            "help/glossary",
+            "help/statminimums",
+            "teams/defense-dash-overall",
+            "spotlightarchive",
+            "help/faq",
+            "teams/advanced-leaders",
+            "players/defense-dash-overall",
+            "teams/boxscores",
+            "players/advanced-leaders",
+            "teams/preseason",
+            "players/clutch-traditional",
+            "fantasynews",
+            "draft/combine-anthro",
+            "teams/misc",
+            "alltime",
+            "help/videostatus",
+            "draft/combine-strength-agility",
+            "leaders",
+            "players/transition",
+            "teams/transition",
+            "draft/combine-shooting-drills",
+            "cumestats",
+            "gamebooks",
+            "players/shots-general",
+            "teams/isolation",
+            "players/hustle",
+            "featuredarchive",
+            "players/opponent-shooting",
+            "teams/catch-shoot",
+            "help",
+            "players/catch-shoot",
+            "teams/shots-general",
+            "players",
+            "teams/opponent",
+            "teams/opponent-shooting",
+            "teams/hustle-leaders",
+            "history",
+            "players/boxscores-traditional",
+            "teams/clutch-traditional",
+            "draft/history",
+            "players/hustle-leaders",
+            "teams",
+            "lineups/lineups-tool",
+            "alltime-leaders",
+            "teams/boxscores-traditional",
+            "teams/four-factors",
+            "teams/traditional",
+            "teams/drives",
+            "players/box-outs",
+            "lineups/traditional",
+            "teams/violations",
+            "quicklinks"
+          ],
+          "content_length": 287875
+        }
+      ],
+      "all_endpoints_found": [
+        "players/shooting",
+        "teams/traditional/",
+        "teams/advanced",
+        "players/boxscores",
+        "teams/shooting",
+        "teams/hustle",
+        "players/traditional",
+        "teams/scoring",
+        "teams/estimated-advanced",
+        "players/bio",
+        "teams/box-outs",
+        "draft/combine",
+        "players/drives",
+        "teams/defense",
+        "tools/media-central-game-stats",
+        "help/glossary",
+        "help/statminimums",
+        "teams/defense-dash-overall",
+        "spotlightarchive",
+        "help/faq",
+        "teams/advanced-leaders",
+        "players/defense-dash-overall",
+        "teams/boxscores",
+        "players/advanced-leaders",
+        "teams/preseason",
+        "players/clutch-traditional",
+        "fantasynews",
+        "draft/combine-anthro",
+        "teams/misc",
+        "alltime",
+        "help/videostatus",
+        "draft/combine-strength-agility",
+        "leaders",
+        "players/transition",
+        "teams/transition",
+        "draft/combine-shooting-drills",
+        "cumestats",
+        "gamebooks",
+        "players/shots-general",
+        "teams/isolation",
+        "players/isolation",
+        "players/hustle",
+        "featuredarchive",
+        "players/opponent-shooting",
+        "teams/catch-shoot",
+        "help",
+        "players/catch-shoot",
+        "players/dunk-scores",
+        "teams/shots-general",
+        "players",
+        "teams/opponent",
+        "teams/opponent-shooting",
+        "quicklinks",
+        "teams/hustle-leaders",
+        "history",
+        "teams/clutch-traditional",
+        "draft/history",
+        "players/hustle-leaders",
+        "teams",
+        "lineups/lineups-tool",
+        "alltime-leaders",
+        "teams/boxscores-traditional",
+        "teams/four-factors",
+        "teams/traditional",
+        "teams/drives",
+        "players/box-outs",
+        "lineups/traditional",
+        "teams/violations",
+        "players/boxscores-traditional"
+      ]
+    }
+  },
+  "website_analysis": {
+    "pages_checked": [
+      {
+        "page": "https://www.nba.com/stats/players/clutch",
+        "status": "HTTP 404"
+      },
+      {
+        "page": "https://www.nba.com/stats/players/shooting",
+        "status": "found",
+        "endpoints_found": [
+          "players/shooting",
+          "players/boxscores",
+          "teams/shooting",
+          "teams/hustle",
+          "players/traditional",
+          "players/bio",
+          "teams/box-outs",
+          "draft/combine",
+          "players/drives",
+          "tools/media-central-game-stats",
+          "help/glossary",
+          "help/statminimums",
+          "teams/defense-dash-overall",
+          "spotlightarchive",
+          "help/faq",
+          "players/defense-dash-overall",
+          "teams/boxscores",
+          "players/advanced-leaders",
+          "teams/preseason",
+          "players/clutch-traditional",
+          "fantasynews",
+          "draft/combine-anthro",
+          "alltime",
+          "help/videostatus",
+          "draft/combine-strength-agility",
+          "leaders",
+          "players/transition",
+          "teams/transition",
+          "draft/combine-shooting-drills",
+          "cumestats",
+          "gamebooks",
+          "players/shots-general",
+          "players/isolation",
+          "players/hustle",
+          "featuredarchive",
+          "players/opponent-shooting",
+          "teams/catch-shoot",
+          "help",
+          "players/catch-shoot",
+          "players/dunk-scores",
+          "teams/shots-general",
+          "players",
+          "teams/opponent-shooting",
+          "history",
+          "players/boxscores-traditional",
+          "teams/clutch-traditional",
+          "draft/history",
+          "players/hustle-leaders",
+          "teams",
+          "lineups/lineups-tool",
+          "alltime-leaders",
+          "teams/boxscores-traditional",
+          "teams/traditional",
+          "players/box-outs",
+          "lineups/traditional",
+          "quicklinks"
+        ],
+        "content_length": 286556
+      },
+      {
+        "page": "https://www.nba.com/stats/players/tracking",
+        "status": "HTTP 404"
+      },
+      {
+        "page": "https://www.nba.com/stats/teams/traditional",
+        "status": "found",
+        "endpoints_found": [
+          "players/shooting",
+          "teams/traditional/",
+          "teams/advanced",
+          "players/boxscores",
+          "teams/shooting",
+          "teams/hustle",
+          "players/traditional",
+          "teams/scoring",
+          "teams/estimated-advanced",
+          "players/bio",
+          "teams/box-outs",
+          "draft/combine",
+          "teams/defense",
+          "tools/media-central-game-stats",
+          "help/glossary",
+          "help/statminimums",
+          "teams/defense-dash-overall",
+          "spotlightarchive",
+          "help/faq",
+          "teams/advanced-leaders",
+          "players/defense-dash-overall",
+          "teams/boxscores",
+          "players/advanced-leaders",
+          "teams/preseason",
+          "players/clutch-traditional",
+          "fantasynews",
+          "draft/combine-anthro",
+          "teams/misc",
+          "alltime",
+          "help/videostatus",
+          "draft/combine-strength-agility",
+          "leaders",
+          "players/transition",
+          "teams/transition",
+          "draft/combine-shooting-drills",
+          "cumestats",
+          "gamebooks",
+          "players/shots-general",
+          "teams/isolation",
+          "players/hustle",
+          "featuredarchive",
+          "players/opponent-shooting",
+          "teams/catch-shoot",
+          "help",
+          "players/catch-shoot",
+          "teams/shots-general",
+          "players",
+          "teams/opponent",
+          "teams/opponent-shooting",
+          "teams/hustle-leaders",
+          "history",
+          "players/boxscores-traditional",
+          "teams/clutch-traditional",
+          "draft/history",
+          "players/hustle-leaders",
+          "teams",
+          "lineups/lineups-tool",
+          "alltime-leaders",
+          "teams/boxscores-traditional",
+          "teams/four-factors",
+          "teams/traditional",
+          "teams/drives",
+          "players/box-outs",
+          "lineups/traditional",
+          "teams/violations",
+          "quicklinks"
+        ],
+        "content_length": 287875
+      }
+    ],
+    "all_endpoints_found": [
+      "players/shooting",
+      "teams/traditional/",
+      "teams/advanced",
+      "players/boxscores",
+      "teams/shooting",
+      "teams/hustle",
+      "players/traditional",
+      "teams/scoring",
+      "teams/estimated-advanced",
+      "players/bio",
+      "teams/box-outs",
+      "draft/combine",
+      "players/drives",
+      "teams/defense",
+      "tools/media-central-game-stats",
+      "help/glossary",
+      "help/statminimums",
+      "teams/defense-dash-overall",
+      "spotlightarchive",
+      "help/faq",
+      "teams/advanced-leaders",
+      "players/defense-dash-overall",
+      "teams/boxscores",
+      "players/advanced-leaders",
+      "teams/preseason",
+      "players/clutch-traditional",
+      "fantasynews",
+      "draft/combine-anthro",
+      "teams/misc",
+      "alltime",
+      "help/videostatus",
+      "draft/combine-strength-agility",
+      "leaders",
+      "players/transition",
+      "teams/transition",
+      "draft/combine-shooting-drills",
+      "cumestats",
+      "gamebooks",
+      "players/shots-general",
+      "teams/isolation",
+      "players/isolation",
+      "players/hustle",
+      "featuredarchive",
+      "players/opponent-shooting",
+      "teams/catch-shoot",
+      "help",
+      "players/catch-shoot",
+      "players/dunk-scores",
+      "teams/shots-general",
+      "players",
+      "teams/opponent",
+      "teams/opponent-shooting",
+      "quicklinks",
+      "teams/hustle-leaders",
+      "history",
+      "teams/clutch-traditional",
+      "draft/history",
+      "players/hustle-leaders",
+      "teams",
+      "lineups/lineups-tool",
+      "alltime-leaders",
+      "teams/boxscores-traditional",
+      "teams/four-factors",
+      "teams/traditional",
+      "teams/drives",
+      "players/box-outs",
+      "lineups/traditional",
+      "teams/violations",
+      "players/boxscores-traditional"
+    ]
+  },
+  "conclusions": [
+    "\u274c leaguedashplayerclutch: Endpoint appears deprecated",
+    "\u274c leaguedashplayershotlocations: Endpoint appears deprecated",
+    "\u274c leaguedashptstats: Endpoint appears deprecated",
+    "\u274c leaguedashteamstats: Endpoint appears deprecated"
+  ],
+  "recommendations": [
+    "\ud83d\udcca Focus on the 4 working endpoints for immediate data collection",
+    "\ud83d\udd0d Monitor NBA.com for new endpoint patterns",
+    "\ud83d\udd04 Check these endpoints again in 1-2 weeks (server issues may resolve)",
+    "\ud83d\udca1 Consider alternative data sources (Basketball Reference, ESPN APIs)",
+    "\u26a1 Implement fallback mechanisms for missing stats"
+  ],
+  "timestamp": "2026-02-10T09:47:37.111382"
+}
