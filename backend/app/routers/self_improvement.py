@@ -80,12 +80,51 @@ def get_genius_picks(days_back: int = 30, min_confidence: float = 0.8, db: Sessi
 
 @router.get("/ai-parlays")
 def get_ai_parlays(days_back: int = 30, min_confidence: float = 0.7, db: Session = Depends(get_db)):
-    """Get AI Parlays that hit their targets."""
-    # This would need a ParlayOutcome table - for now return empty
+    """Get high-confidence multi-leg style recommendations from tracked outcomes."""
+    cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+
+    outcomes = db.query(models.PredictionOutcome).filter(
+        models.PredictionOutcome.created_at >= cutoff_date,
+        models.PredictionOutcome.predicted_confidence >= min_confidence
+    ).order_by(models.PredictionOutcome.created_at.desc()).all()
+
+    wins = sum(1 for o in outcomes if o.actual_result == "win")
+    losses = sum(1 for o in outcomes if o.actual_result == "loss")
+    resolved = wins + losses
+
+    # Group by creation day to provide "parlay-style bundles" from same batch window.
+    grouped: Dict[str, List[models.PredictionOutcome]] = {}
+    for outcome in outcomes:
+        key = outcome.created_at.strftime("%Y-%m-%d")
+        grouped.setdefault(key, []).append(outcome)
+
+    parlays = []
+    for day_key, bundle in grouped.items():
+        if len(bundle) < 2:
+            continue
+        bundle_wins = sum(1 for b in bundle if b.actual_result == "win")
+        bundle_losses = sum(1 for b in bundle if b.actual_result == "loss")
+        bundle_resolved = bundle_wins + bundle_losses
+        parlays.append({
+            "date": day_key,
+            "legs": len(bundle),
+            "avg_confidence": round(sum(b.predicted_confidence for b in bundle) / len(bundle), 3),
+            "resolved_legs": bundle_resolved,
+            "wins": bundle_wins,
+            "losses": bundle_losses,
+            "status": "resolved" if bundle_resolved == len(bundle) else "pending"
+        })
+
+    parlays.sort(key=lambda p: p["date"], reverse=True)
+
     return {
-        "count": 0,
-        "parlays": [],
-        "message": "Parlay tracking coming soon"
+        "count": len(parlays),
+        "parlays": parlays,
+        "summary": {
+            "total_predictions_considered": len(outcomes),
+            "resolved_predictions": resolved,
+            "win_rate": round((wins / resolved), 3) if resolved else 0.0
+        }
     }
 
 @router.get("/dashboard-stats")

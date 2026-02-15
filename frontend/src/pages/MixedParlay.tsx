@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchMixedParlay } from "../api";
 import { Layers, RefreshCw, Trophy, TrendingUp, Zap, Target, Brain } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAvailableDates } from "../hooks/useAvailableDates";
+import { getLocalISODate } from "../lib/utils";
 
 const getBetType = (pick: string): 'prop' | 'spread' | 'moneyline' => {
     if (pick.includes('OVER') || pick.includes('UNDER')) return 'prop';
@@ -22,21 +24,93 @@ const getBetTypeColor = (type: 'prop' | 'spread' | 'moneyline'): string => {
     }[type];
 };
 
+type ParsedLegPick = {
+    title: string;
+    market: string | null;
+    side: "OVER" | "UNDER" | null;
+    line: string | null;
+    subtitle: string;
+};
+
+const normalizeMarket = (market: string) => {
+    const map: Record<string, string> = {
+        "PTS+REB+AST": "PTS + REB + AST",
+        "PTS+REB": "PTS + REB",
+        "PTS+AST": "PTS + AST",
+        "REB+AST": "REB + AST",
+    };
+    const upper = market.toUpperCase();
+    return map[upper] || upper.replace(/\+/g, " + ");
+};
+
+const parseLegPick = (pick: string, type: 'prop' | 'spread' | 'moneyline'): ParsedLegPick => {
+    if (type !== "prop") {
+        return {
+            title: pick,
+            market: null,
+            side: null,
+            line: null,
+            subtitle: "Game market leg",
+        };
+    }
+
+    const match = pick.match(/^(.*?)\s+([A-Z0-9+]+)\s+(OVER|UNDER)\s+(-?\d+(?:\.\d+)?)$/i);
+    if (!match) {
+        return {
+            title: pick,
+            market: null,
+            side: null,
+            line: null,
+            subtitle: "Player prop leg",
+        };
+    }
+
+    const [, player, market, side, line] = match;
+    return {
+        title: player.trim(),
+        market: normalizeMarket(market.trim()),
+        side: side.toUpperCase() as "OVER" | "UNDER",
+        line,
+        subtitle: "Player prop leg",
+    };
+};
+
 export const MixedParlay: React.FC = () => {
     const queryClient = useQueryClient();
     const [selectedLegs, setSelectedLegs] = useState(5);
     const [stake, setStake] = useState(100);
-
-    const { data: parlay, isLoading } = useQuery({
-        queryKey: ["mixedParlay", selectedLegs],
-        queryFn: () => fetchMixedParlay(selectedLegs),
-        staleTime: 1000 * 60 * 2
+    const { availableDates, defaultDate } = useAvailableDates();
+    const [selectedDate, setSelectedDate] = useState(() => {
+        return defaultDate || getLocalISODate();
     });
 
+    useEffect(() => {
+        if (defaultDate) {
+            setSelectedDate(defaultDate);
+        }
+    }, [defaultDate]);
+
+    const displayedDates = useMemo(() => (
+        availableDates.includes(selectedDate) ? availableDates : [selectedDate, ...availableDates]
+    ), [availableDates, selectedDate]);
+
+    const { data: parlay, isLoading } = useQuery({
+        queryKey: ["mixedParlay", selectedLegs, selectedDate],
+        queryFn: () => fetchMixedParlay(selectedLegs, "balanced", selectedDate),
+        staleTime: 1000 * 60 * 2,
+        enabled: !!selectedDate // Only run query when date is available
+    });
+
+    useEffect(() => {
+        if (parlay?.date_used && parlay.date_used !== selectedDate) {
+            setSelectedDate(parlay.date_used);
+        }
+    }, [parlay?.date_used, selectedDate]);
+
     const generateMutation = useMutation({
-        mutationFn: (legs: number) => fetchMixedParlay(legs),
+        mutationFn: (legs: number) => fetchMixedParlay(legs, "balanced", selectedDate),
         onSuccess: (data) => {
-            queryClient.setQueryData(["mixedParlay", selectedLegs], data);
+            queryClient.setQueryData(["mixedParlay", selectedLegs, selectedDate], data);
         }
     });
 
@@ -62,6 +136,28 @@ export const MixedParlay: React.FC = () => {
                         <h1 className="text-2xl font-bold text-white">AI Mixed Parlay</h1>
                         <p className="text-sm text-muted">Kelly-optimized player props + game bets</p>
                     </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                    <select
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium outline-none focus:border-purple-500/50 transition-colors"
+                    >
+                        {displayedDates.length > 0 ? (
+                            displayedDates.map(date => (
+                                <option key={date} value={date} className="bg-card">
+                                    {new Date(date).toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                    })}
+                                </option>
+                            ))
+                        ) : (
+                            <option value={selectedDate} className="bg-card">{selectedDate}</option>
+                        )}
+                    </select>
                 </div>
             </div>
 
@@ -145,6 +241,8 @@ export const MixedParlay: React.FC = () => {
                             <AnimatePresence>
                                 {parlay.legs.map((leg, i) => {
                                     const betType = getBetType(leg.pick);
+                                    const parsed = parseLegPick(leg.pick, betType);
+                                    const confidencePct = Math.max(0, Math.min(100, Math.round(leg.confidence * 100)));
                                     return (
                                         <motion.div
                                             key={i}
@@ -152,30 +250,76 @@ export const MixedParlay: React.FC = () => {
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: 20 }}
                                             transition={{ delay: i * 0.05 }}
-                                            className="bg-card border border-white/10 rounded-xl p-4 hover:border-purple-500/30 transition-colors"
+                                            className="bg-linear-to-br from-[#0f1b40] to-[#0b1430] border border-white/10 rounded-xl p-4 hover:border-purple-500/35 transition-all"
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-2xl font-black text-white/10">
-                                                        {String(i + 1).padStart(2, '0')}
-                                                    </span>
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getBetTypeColor(betType)}`}>
-                                                                {getBetTypeLabel(betType)}
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border text-white/60 border-white/20">
+                                                            #{String(i + 1).padStart(2, "0")}
+                                                        </span>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getBetTypeColor(betType)}`}>
+                                                            {getBetTypeLabel(betType)}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="text-base font-bold text-white truncate">{parsed.title}</div>
+
+                                                    {parsed.market && parsed.side && parsed.line ? (
+                                                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                            <span className="text-xs text-muted">{parsed.market}</span>
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${parsed.side === "OVER" ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"}`}>
+                                                                {parsed.side}
                                                             </span>
-                                                            <span className="text-white font-medium">{leg.pick}</span>
+                                                            <span className="text-sm font-semibold text-secondary">{parsed.line}</span>
                                                         </div>
-                                                        <div className="flex items-center gap-2 text-xs text-muted">
-                                                            <span>Game #{leg.game_id}</span>
-                                                            <span>•</span>
-                                                            <span className="text-purple-400">{(leg.confidence * 100).toFixed(0)}% conf</span>
+                                                    ) : (
+                                                        <div className="mt-1 text-xs text-muted">{parsed.subtitle}</div>
+                                                    )}
+
+                                                    {(leg.opponent || leg.matchup) && (
+                                                        <div className="mt-1 text-[11px] text-secondary/90 font-medium">
+                                                            {leg.opponent ? `vs ${leg.opponent}` : leg.matchup}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="mt-3">
+                                                        <div className="flex items-center justify-between text-[11px] text-muted mb-1">
+                                                            <span>Confidence</span>
+                                                            <span className="text-purple-300 font-semibold">{confidencePct}%</span>
+                                                        </div>
+                                                        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-linear-to-r from-purple-400 to-indigo-400"
+                                                                style={{ width: `${confidencePct}%` }}
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className={`text-lg font-bold ${leg.odds > 0 ? 'text-emerald-400' : 'text-white'}`}>
+
+                                                <div className="shrink-0 flex items-start gap-3">
+                                                    {betType === "prop" && (
+                                                        leg.player_headshot ? (
+                                                            <img
+                                                                src={leg.player_headshot}
+                                                                alt={leg.player_name || parsed.title}
+                                                                className="w-12 h-12 rounded-xl object-cover border border-white/15 bg-white/5"
+                                                                onError={(e) => {
+                                                                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-xl border border-white/15 bg-white/5 flex items-center justify-center text-xs font-bold text-white/70">
+                                                                {(leg.player_name || parsed.title || "?").split(" ").map(s => s[0]).join("").slice(0, 2).toUpperCase()}
+                                                            </div>
+                                                        )
+                                                    )}
+                                                    <div className="text-right min-w-[90px]">
+                                                    <div className="text-[10px] text-muted uppercase tracking-wide mb-1">Odds</div>
+                                                    <div className={`text-xl font-black ${leg.odds > 0 ? 'text-emerald-400' : 'text-white'}`}>
                                                         {formatOdds(leg.odds)}
+                                                    </div>
+                                                    <div className="mt-2 text-[11px] text-muted">Game #{leg.game_id}</div>
                                                     </div>
                                                 </div>
                                             </div>

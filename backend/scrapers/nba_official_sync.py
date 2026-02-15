@@ -30,6 +30,11 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def _current_nba_season(reference: Optional[datetime] = None) -> str:
+    reference = reference or datetime.utcnow()
+    start_year = reference.year if reference.month >= 7 else reference.year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
 class NBAOfficialDataFetcher:
     """Fetches NBA data from official API and integrates with Karchain backend"""
     
@@ -74,8 +79,9 @@ class NBAOfficialDataFetcher:
             logger.error(f"Error fetching {endpoint}: {e}")
             return None
     
-    def fetch_player_traditional_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+    def fetch_player_traditional_stats(self, season: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch traditional player statistics"""
+        season = season or _current_nba_season()
         params = {
             'Season': season,
             'SeasonType': 'Regular Season',
@@ -106,8 +112,9 @@ class NBAOfficialDataFetcher:
             return df
         return None
     
-    def fetch_player_advanced_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+    def fetch_player_advanced_stats(self, season: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch advanced player statistics"""
+        season = season or _current_nba_season()
         params = {
             'Season': season,
             'SeasonType': 'Regular Season',
@@ -138,8 +145,9 @@ class NBAOfficialDataFetcher:
             return df
         return None
     
-    def fetch_player_clutch_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+    def fetch_player_clutch_stats(self, season: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch clutch player statistics"""
+        season = season or _current_nba_season()
         params = {
             'Season': season,
             'SeasonType': 'Regular Season',
@@ -170,8 +178,9 @@ class NBAOfficialDataFetcher:
             return df
         return None
     
-    def fetch_player_defense_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+    def fetch_player_defense_stats(self, season: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch player defense statistics"""
+        season = season or _current_nba_season()
         params = {
             'Season': season,
             'SeasonType': 'Regular Season',
@@ -199,8 +208,9 @@ class NBAOfficialDataFetcher:
             return df
         return None
     
-    def fetch_player_hustle_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+    def fetch_player_hustle_stats(self, season: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch player hustle statistics"""
+        season = season or _current_nba_season()
         params = {
             'Season': season,
             'SeasonType': 'Regular Season',
@@ -227,8 +237,9 @@ class NBAOfficialDataFetcher:
             return df
         return None
     
-    def fetch_team_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+    def fetch_team_stats(self, season: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch team statistics"""
+        season = season or _current_nba_season()
         params = {
             'Season': season,
             'SeasonType': 'Regular Season',
@@ -348,8 +359,9 @@ class NBAOfficialDataFetcher:
             logger.error(f"Error saving team stats to database: {e}")
             self.db.rollback()
     
-    def fetch_all_stats(self, season: str = "2023-24") -> Dict[str, pd.DataFrame]:
+    def fetch_all_stats(self, season: Optional[str] = None) -> Dict[str, pd.DataFrame]:
         """Fetch all NBA statistics for the season"""
+        season = season or _current_nba_season()
         all_stats = {}
         
         logger.info(f"Fetching all NBA stats for {season} season...")
@@ -387,7 +399,7 @@ def main():
         logger.info("Starting NBA Official Data Fetcher...")
         
         # Fetch all stats for current season
-        season = "2023-24"
+        season = _current_nba_season()
         all_stats = fetcher.fetch_all_stats(season)
         
         # Print summary

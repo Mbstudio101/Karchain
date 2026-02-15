@@ -793,9 +793,18 @@ class BettingProsScraper(BaseScraper):
             if not game: return
 
             player = db.query(Player).filter(Player.name.ilike(f"%{player_name}%")).first()
+            
+            # Find the team for this player
+            team = db.query(Team).filter(Team.name.ilike(f"%{team_name}%")).first()
+            
             if not player:
-                player = Player(name=player_name, sport="NBA", active_status=True)
+                player = Player(name=player_name, sport="NBA", active_status=True, team_id=team.id if team else None)
                 db.add(player)
+                db.commit()
+                db.refresh(player)
+            elif not player.team_id and team:
+                # Update team_id if missing
+                player.team_id = team.id
                 db.commit()
                 db.refresh(player)
 

@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useMemo, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchAdvancedProps } from "../api";
 import { Search, Filter, Target, ArrowUpDown, ChevronDown, Star, Zap, TrendingUp, TrendingDown, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAvailableDates } from "../hooks/useAvailableDates";
+import { getLocalISODate } from "../lib/utils";
 
 const PROP_TYPES = [
     'all',
@@ -47,12 +49,24 @@ export const PropsFinder: React.FC = () => {
     const [minEdge, setMinEdge] = useState(0);
     const [showFilters, setShowFilters] = useState(true);
     const [selectedPicks, setSelectedPicks] = useState<Record<number, 'over' | 'under'>>({});
+    const { availableDates, defaultDate } = useAvailableDates();
     const [selectedDate, setSelectedDate] = useState(() => {
-        // Default to today's date
-        const today = new Date();
-        return today.toISOString().split('T')[0];
+        // Use the next available date if available, otherwise today
+        return defaultDate || getLocalISODate();
     });
     const [overUnderFilter, setOverUnderFilter] = useState<string>("");
+    const [copyStatus, setCopyStatus] = useState("");
+
+    // Update selected date when default date is available
+    useEffect(() => {
+        if (defaultDate) {
+            setSelectedDate(defaultDate);
+        }
+    }, [defaultDate]);
+
+    const displayedDates = useMemo(() => (
+        availableDates.includes(selectedDate) ? availableDates : [selectedDate, ...availableDates]
+    ), [availableDates, selectedDate]);
 
     const togglePick = (propId: number, side: 'over' | 'under') => {
         setSelectedPicks(prev => {
@@ -64,13 +78,34 @@ export const PropsFinder: React.FC = () => {
         });
     };
 
+    const queryClient = useQueryClient();
+
     const { data, isLoading } = useQuery({
         queryKey: ["advancedProps", selectedDate, overUnderFilter],
         queryFn: () => fetchAdvancedProps(0, 0, selectedDate, overUnderFilter),
-        refetchInterval: 60000,
+        // Removed polling in favor of WebSocket updates
     });
 
+    useEffect(() => {
+        if (data?.date_used && data.date_used !== selectedDate) {
+            setSelectedDate(data.date_used);
+        }
+    }, [data?.date_used, selectedDate]);
+
+    // Listen for WebSocket updates
+    useEffect(() => {
+        const handlePropsUpdate = () => {
+            queryClient.invalidateQueries({ queryKey: ["advancedProps"] });
+        };
+
+        window.addEventListener("propsUpdated", handlePropsUpdate);
+        return () => window.removeEventListener("propsUpdated", handlePropsUpdate);
+    }, [queryClient]);
+
     const props = data?.props || [];
+    const propsById = useMemo(() => {
+        return new Map(props.map((p) => [p.prop_id, p]));
+    }, [props]);
 
     // Filter and sort
     const filteredProps = useMemo(() => {
@@ -189,12 +224,25 @@ export const PropsFinder: React.FC = () => {
                             </div>
 
                             <div className="relative">
-                                <input
-                                    type="date"
+                                <select
                                     value={selectedDate}
                                     onChange={e => setSelectedDate(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-primary"
-                                />
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-primary appearance-none"
+                                >
+                                    {displayedDates.length > 0 ? (
+                                        displayedDates.map(date => (
+                                            <option key={date} value={date} className="bg-card">
+                                                {new Date(date).toLocaleDateString('en-US', { 
+                                                    month: 'short', 
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                })}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value={selectedDate} className="bg-card">{selectedDate}</option>
+                                    )}
+                                </select>
                             </div>
 
                             <div className="relative">
@@ -406,7 +454,13 @@ export const PropsFinder: React.FC = () => {
 
             {filteredProps.length === 0 && !isLoading && (
                 <div className="text-center text-muted py-10">
-                    No props found matching your filters
+                    No props found for {new Date(selectedDate).toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: 'numeric',
+                        year: 'numeric'
+                    })}
+                    <br />
+                    <span className="text-xs opacity-50">Try adjusting filters or select a different date</span>
                 </div>
             )}
 
@@ -418,7 +472,7 @@ export const PropsFinder: React.FC = () => {
 
             {/* Selected Picks Summary Bar */}
             <AnimatePresence>
-                {Object.keys(selectedPicks).length > 0 && (
+                                    {Object.keys(selectedPicks).length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -428,6 +482,24 @@ export const PropsFinder: React.FC = () => {
                         <div className="text-sm text-white">
                             <span className="font-bold text-primary">{Object.keys(selectedPicks).length}</span> pick{Object.keys(selectedPicks).length !== 1 ? 's' : ''} selected
                         </div>
+                        {copyStatus && <div className="text-xs text-emerald-300">{copyStatus}</div>}
+                        <button
+                            onClick={async () => {
+                                const lines = Object.entries(selectedPicks).map(([propId, side]) => {
+                                    const prop = propsById.get(Number(propId));
+                                    if (!prop) return `${propId}: ${side.toUpperCase()}`;
+                                    const odds = side === "over" ? prop.over_odds : prop.under_odds;
+                                    const oddsText = odds > 0 ? `+${odds}` : `${odds}`;
+                                    return `${prop.player_name} ${prop.prop_type} ${side.toUpperCase()} ${prop.line} (${oddsText})`;
+                                });
+                                await navigator.clipboard.writeText(lines.join("\n"));
+                                setCopyStatus("Copied");
+                                window.setTimeout(() => setCopyStatus(""), 1500);
+                            }}
+                            className="text-xs text-primary hover:text-emerald-300 transition-colors"
+                        >
+                            Copy Picks
+                        </button>
                         <button
                             onClick={() => setSelectedPicks({})}
                             className="text-xs text-muted hover:text-white transition-colors"

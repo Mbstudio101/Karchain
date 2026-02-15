@@ -60,11 +60,13 @@ interface DashboardStats {
 }
 
 export const SelfImprovementDashboard: React.FC = () => {
+  const RETRAINABLE_MODELS = new Set(["xgboost"]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedModel, setSelectedModel] = useState<string>('xgboost');
   const [geniusPicks, setGeniusPicks] = useState<GeniusPick[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [retrainStatus, setRetrainStatus] = useState<string>("");
 
   useEffect(() => {
     fetchDashboardStats();
@@ -108,11 +110,16 @@ export const SelfImprovementDashboard: React.FC = () => {
   };
 
   const retrainModel = async (modelName: string) => {
+    if (!RETRAINABLE_MODELS.has(modelName)) {
+      setRetrainStatus(`Retraining is currently available only for xgboost.`);
+      return;
+    }
     try {
       await api.post(`/self-improvement/retrain-model/${modelName}`);
-      alert(`Model retraining started for ${modelName}`);
+      setRetrainStatus(`Retraining started for ${modelName}.`);
     } catch (error) {
       console.error('Failed to retrain model:', error);
+      setRetrainStatus(`Failed to retrain ${modelName}.`);
     }
   };
 
@@ -211,11 +218,15 @@ export const SelfImprovementDashboard: React.FC = () => {
           </h3>
           <button
             onClick={() => retrainModel(selectedModel)}
-            className="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-600/30 text-sm transition-colors"
+            disabled={!RETRAINABLE_MODELS.has(selectedModel)}
+            className="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-600/30 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Retrain Model
           </button>
         </div>
+        {retrainStatus && (
+          <div className="mb-4 text-sm text-blue-300">{retrainStatus}</div>
+        )}
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="text-center">

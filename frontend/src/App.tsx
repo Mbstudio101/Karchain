@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Dashboard } from "./pages/Dashboard";
 import { Players } from "./pages/Players";
+import { Teams } from "./pages/Teams";
 import { PropsFinder } from "./pages/PropsFinder";
 import { Analysis } from "./pages/Analysis";
 import { History } from "./pages/History";
@@ -16,41 +17,52 @@ import { Login } from "./pages/auth/Login";
 import { SignUp } from "./pages/auth/SignUp";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { WebSocketProvider } from "./context/WebSocketContext";
+import { DesktopTitlebar } from "./components/layout/DesktopTitlebar";
 
 const queryClient = new QueryClient();
+const isDesktop = typeof window !== "undefined" && (window as any).__TAURI__ !== undefined;
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
+      <WebSocketProvider>
+        <div className="h-screen w-full overflow-hidden">
+          <DesktopTitlebar />
+          <div className={isDesktop ? "h-[calc(100vh-2.5rem)]" : "h-full"}>
+            <Router>
+              <AuthProvider>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<SignUp />} />
 
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<AppLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="players" element={<Players />} />
-                <Route path="props-finder" element={<PropsFinder />} />
-                <Route path="analysis" element={<Analysis />} />
-                <Route path="self-improvement" element={<SelfImprovement />} />
-                <Route path="history" element={<History />} />
-                <Route path="games/:id" element={<GameDetails />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="mixed-parlay" element={<MixedParlay />} />
-                <Route path="genius-picks" element={<GeniusPicksPage />} />
-              </Route>
-            </Route>
+                  {/* Protected Routes */}
+                  <Route element={<ProtectedRoute />}>
+                    <Route path="/" element={<AppLayout />}>
+                      <Route index element={<Dashboard />} />
+                      <Route path="dashboard" element={<Dashboard />} />
+                      <Route path="players" element={<Players />} />
+                      <Route path="teams" element={<Teams />} />
+                      <Route path="props-finder" element={<PropsFinder />} />
+                      <Route path="analysis" element={<Analysis />} />
+                      <Route path="self-improvement" element={<SelfImprovement />} />
+                      <Route path="history" element={<History />} />
+                      <Route path="games/:id" element={<GameDetails />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="mixed-parlay" element={<MixedParlay />} />
+                      <Route path="genius-picks" element={<GeniusPicksPage />} />
+                    </Route>
+                  </Route>
 
-            {/* Catch-all for unmatched routes */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AuthProvider>
-      </Router>
+                  {/* Catch-all for unmatched routes */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </AuthProvider>
+            </Router>
+          </div>
+        </div>
+      </WebSocketProvider>
     </QueryClientProvider>
   );
 }

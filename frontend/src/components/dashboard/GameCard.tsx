@@ -10,20 +10,20 @@ interface GameCardProps {
 }
 
 const OddsPill = ({ value, price, type, label }: { value: string | number | null, price: number | null, type: 'spread' | 'total' | 'money', label?: string }) => {
-    if (value === null && price === null) return <div className="h-14 bg-white/5 rounded-lg animate-pulse" />;
+    if (value === null && price === null) return <div className="h-14 bg-white/5 rounded-lg animate-pulse border border-white/10" />;
 
     return (
-        <div className="flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 border border-white/5 hover:border-primary/30 rounded-lg p-2 transition-all cursor-pointer group h-14 relative overflow-hidden">
+        <div className="flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 hover:border-secondary/35 rounded-lg p-2 transition-all group h-14 relative overflow-hidden">
             {label && (
                 <span className="absolute top-1 left-1.5 text-[8px] uppercase text-muted/50 font-bold tracking-tighter">
                     {label}
                 </span>
             )}
             <div className="flex items-baseline gap-1 mt-1">
-                <span className={cn(
-                    "text-sm font-bold",
-                    type === 'spread' ? (Number(value) < 0 ? "text-emerald-400" : "text-foreground") : "text-foreground"
-                )}>
+                    <span className={cn(
+                        "text-sm font-bold",
+                        type === 'spread' ? (Number(value) < 0 ? "text-primary" : "text-foreground") : "text-foreground"
+                    )}>
                     {type === 'spread' && Number(value) > 0 ? "+" : ""}{value}
                 </span>
                 {price !== null && (
@@ -71,10 +71,11 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -5, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)" }}
-            className="bg-card border border-white/5 rounded-2xl p-5 relative overflow-hidden group"
+            className="bg-linear-to-br from-[#0f1838] via-card to-[#0b1330] border border-white/10 rounded-2xl p-5 relative overflow-hidden group"
         >
             {/* Background Accent */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-secondary/20 transition-colors" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/10 blur-2xl rounded-full -ml-10 -mb-10 group-hover:bg-primary/20 transition-colors" />
 
             {/* Header */}
             <div className="flex justify-between items-start mb-4 relative z-10">
@@ -96,8 +97,8 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                         <span className="text-[10px] font-black tracking-widest text-white/10 uppercase mr-1">{game.sport}</span>
                     )}
                     {game.status === "Live" && (
-                        <div className="bg-emerald-500/10 text-emerald-500 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-emerald-500/20 flex items-center gap-1.5 shadow-sm shadow-emerald-500/10">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <div className="bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-primary/25 flex items-center gap-1.5 shadow-sm shadow-primary/15">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                             Live
                         </div>
                     )}
@@ -124,7 +125,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
                 <div className="flex justify-center min-w-[60px]">
                     {game.status !== "Scheduled" ? (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/10">
                             <span className={`text-xl font-bold tracking-tight ${game.away_score > game.home_score ? 'text-white' : 'text-muted'}`}>{game.away_score}</span>
                             <span className="text-muted text-xs">-</span>
                             <span className={`text-xl font-bold tracking-tight ${game.home_score > game.away_score ? 'text-white' : 'text-muted'}`}>{game.home_score}</span>
@@ -213,13 +214,13 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
             <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                 {game.recommendations && game.recommendations.length > 0 ? (
                     <div className="flex items-center gap-2">
-                        {game.recommendations[0].reasoning.includes("ML Enhanced") ? (
-                             <div className="flex items-center gap-1.5 text-xs font-bold text-purple-400 bg-purple-500/10 px-2 py-1 rounded-lg border border-purple-500/20">
+                        {(game.recommendations[0].reasoning || "").includes("ML Enhanced") ? (
+                             <div className="flex items-center gap-1.5 text-xs font-bold text-accent bg-accent/10 px-2 py-1 rounded-lg border border-accent/25">
                                 <Brain size={12} className="animate-pulse" />
                                 <span>AI Pick: {game.recommendations[0].recommended_pick}</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg border border-primary/20">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-secondary bg-secondary/10 px-2 py-1 rounded-lg border border-secondary/25">
                                 <Sparkles size={12} className="animate-pulse" />
                                 <span>Smart Pick: {game.recommendations[0].recommended_pick}</span>
                             </div>
@@ -227,7 +228,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                         
                         <span className={cn(
                             "text-[10px] font-bold px-1.5 py-1 rounded-md border border-white/10",
-                            game.recommendations[0].confidence_score > 0.75 ? "text-emerald-400 bg-emerald-400/10" : "text-muted bg-white/5"
+                            game.recommendations[0].confidence_score > 0.75 ? "text-primary bg-primary/10" : "text-muted bg-white/5"
                         )}>
                             {(game.recommendations[0].confidence_score * 100).toFixed(0)}%
                         </span>

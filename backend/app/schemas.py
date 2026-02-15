@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date
 
 # --- Odds Schemas ---
 class OddsBase(BaseModel):
@@ -39,6 +39,30 @@ class TeamBase(BaseModel):
     current_record: Optional[str] = None
     logo_url: Optional[str] = None
     stats: List[TeamStatsBase] = []
+
+    class Config:
+        from_attributes = True
+
+class TeamInsightBase(BaseModel):
+    team_id: int
+    team_name: str
+    team_abbr: str
+    conference: Optional[str] = None
+    division: Optional[str] = None
+    current_record: Optional[str] = None
+    logo_url: Optional[str] = None
+    games_sampled: int = 0
+    opp_points: Optional[float] = None
+    opp_rebounds: Optional[float] = None
+    opp_assists: Optional[float] = None
+    opp_stocks: Optional[float] = None
+    points_rank_most_allowed: Optional[int] = None
+    rebounds_rank_most_allowed: Optional[int] = None
+    assists_rank_most_allowed: Optional[int] = None
+    stocks_rank_most_allowed: Optional[int] = None
+    overall_easiest_rank: Optional[int] = None
+    strengths: List[str] = []
+    weaknesses: List[str] = []
 
     class Config:
         from_attributes = True
@@ -126,12 +150,17 @@ class ParlayLeg(BaseModel):
     pick: str
     odds: int
     confidence: float
+    player_name: Optional[str] = None
+    player_headshot: Optional[str] = None
+    opponent: Optional[str] = None
+    matchup: Optional[str] = None
 
 class ParlayBase(BaseModel):
     legs: List[ParlayLeg]
     combined_odds: int
     potential_payout: float  # For $100 stake
     confidence_score: float
+    date_used: Optional[date] = None
 
 # --- Auth Schemas ---
 class UserBase(BaseModel):

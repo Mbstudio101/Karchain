@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import case, exists, select
 from typing import List, Optional
 from datetime import date, datetime, timedelta
 from .. import models, schemas
 from ..dependencies import get_db
-from ..date_utils import get_current_gameday, get_gameday_range
+from ..date_utils import get_client_timezone, get_current_gameday, get_gameday_range, game_datetime_to_gameday
 
 router = APIRouter(
     prefix="/games",
@@ -26,16 +26,16 @@ def _sync_espn_for_date(target_date: date):
         print(f"ESPN Sync failed for {target_date}: {e}")
 
 
-def _sync_espn_today_and_tomorrow():
+def _sync_espn_today_and_tomorrow(timezone_name: str = "America/New_York"):
     """Sync today and tomorrow to catch upcoming games."""
-    from datetime import date as dt_date
-    today = get_current_gameday()
+    today = get_current_gameday(timezone_name)
     _sync_espn_for_date(today)
     _sync_espn_for_date(today + timedelta(days=1))
 
 
 @router.get("/", response_model=List[schemas.GameBase])
 def read_games(
+    request: Request,
     date: Optional[date] = None,
     skip: int = 0,
     limit: int = 100,
@@ -45,11 +45,12 @@ def read_games(
     Returns games for a gameday, with real-time ESPN score sync.
     Defaults to today's gameday (Eastern time, 5 AM cutoff).
     """
+    client_tz = get_client_timezone(request)
     if date is None:
-        date = get_current_gameday()
+        date = get_current_gameday(client_tz)
 
     # 1. Sync with ESPN for real-time scores (today + tomorrow)
-    _sync_espn_today_and_tomorrow()
+    _sync_espn_today_and_tomorrow(client_tz)
 
     # The ESPN sync uses its own session, so we need to expire
     # our session's cache to see the updated scores
@@ -70,7 +71,7 @@ def read_games(
     # 3. Query games using the UTC-aware gameday range
     #    A 7:30 PM ET game on Feb 10 = 00:30 UTC Feb 11,
     #    so we use get_gameday_range() which accounts for this.
-    start_utc, end_utc = get_gameday_range(date)
+    start_utc, end_utc = get_gameday_range(date, client_tz)
 
     has_odds = exists(
         select(models.BettingOdds.id).where(
@@ -92,6 +93,25 @@ def read_games(
     ).offset(skip).limit(limit).all()
 
     return games
+
+
+@router.get("/available-dates", response_model=List[date])
+def get_available_game_dates(request: Request, db: Session = Depends(get_db)):
+    """Get all dates that have games in the database."""
+    # Query all game dates
+    # We use a raw query for efficiency to just get distinct dates
+    dates = db.query(models.Game.game_date).all()
+    client_tz = get_client_timezone(request)
+    
+    # Extract unique dates (converting datetime to date)
+    unique_dates = set()
+    for d in dates:
+        if isinstance(d[0], datetime):
+            unique_dates.add(game_datetime_to_gameday(d[0], client_tz))
+        else:
+            unique_dates.add(d[0])
+            
+    return sorted(list(unique_dates))
 
 
 @router.get("/{game_id}", response_model=schemas.GameBase)

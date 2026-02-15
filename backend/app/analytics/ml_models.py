@@ -14,6 +14,11 @@ from app.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
+def _current_nba_season(reference: datetime = None) -> str:
+    reference = reference or datetime.utcnow()
+    start_year = reference.year if reference.month >= 7 else reference.year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
 class FeatureEngineer:
     def __init__(self, db: Session):
         self.db = db
@@ -149,6 +154,7 @@ class FeatureEngineer:
         games = self.db.query(Game).filter(Game.status == "Final").all()
         data = []
         
+        season = _current_nba_season()
         for game in games:
             if not game.home_team or not game.away_team:
                 continue
@@ -158,8 +164,8 @@ class FeatureEngineer:
             away_stats = self.get_team_rolling_stats(game.away_team_id, game.game_date)
             
             # Get hustle and defense stats for both teams
-            home_hustle = self.get_team_hustle_defense_stats(game.home_team_id, "2023-24")
-            away_hustle = self.get_team_hustle_defense_stats(game.away_team_id, "2023-24")
+            home_hustle = self.get_team_hustle_defense_stats(game.home_team_id, season)
+            away_hustle = self.get_team_hustle_defense_stats(game.away_team_id, season)
             
             row = {
                 "home_ppg": home_stats["ppg"],
@@ -253,10 +259,11 @@ class NBAXGBoostModel:
         engineer = FeatureEngineer(db)
         home_stats = engineer.get_team_rolling_stats(game.home_team_id, game.game_date)
         away_stats = engineer.get_team_rolling_stats(game.away_team_id, game.game_date)
+        season = _current_nba_season()
         
         # Get hustle and defense stats
-        home_hustle = engineer.get_team_hustle_defense_stats(game.home_team_id, "2023-24")
-        away_hustle = engineer.get_team_hustle_defense_stats(game.away_team_id, "2023-24")
+        home_hustle = engineer.get_team_hustle_defense_stats(game.home_team_id, season)
+        away_hustle = engineer.get_team_hustle_defense_stats(game.away_team_id, season)
 
         row = {
             "home_ppg": home_stats["ppg"],

@@ -15,6 +15,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def _current_nba_season(reference: Optional[datetime] = None) -> str:
+    reference = reference or datetime.utcnow()
+    start_year = reference.year if reference.month >= 7 else reference.year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
 class NBAApiClient:
     """Real NBA API client for live statistics and player data"""
     
@@ -34,9 +39,10 @@ class NBAApiClient:
         self.session = requests.Session()
         self.session.headers.update(self.headers)
         
-    def get_player_clutch_stats(self, player_id: str, season: str = "2024-25") -> Dict[str, float]:
+    def get_player_clutch_stats(self, player_id: str, season: Optional[str] = None) -> Dict[str, float]:
         """Get real clutch time statistics from NBA Stats API"""
         try:
+            season = season or _current_nba_season()
             # NBA Stats API clutch endpoint
             url = f"{self.base_url}/stats/leaguedashplayerclutch"
             params = {
@@ -74,9 +80,10 @@ class NBAApiClient:
             logger.error(f"Error fetching clutch stats for player {player_id}: {e}")
             return self._get_fallback_clutch_stats()
     
-    def get_player_tracking_stats(self, player_id: str, season: str = "2024-25") -> Dict[str, float]:
+    def get_player_tracking_stats(self, player_id: str, season: Optional[str] = None) -> Dict[str, float]:
         """Get player tracking stats (speed, distance, etc.)"""
         try:
+            season = season or _current_nba_season()
             url = f"{self.base_url}/stats/leaguedashptstats"
             params = {
                 'Season': season,
@@ -107,9 +114,10 @@ class NBAApiClient:
             logger.error(f"Error fetching tracking stats for player {player_id}: {e}")
             return self._get_fallback_tracking_stats()
     
-    def get_defensive_impact(self, player_id: str, season: str = "2024-25") -> Dict[str, float]:
+    def get_defensive_impact(self, player_id: str, season: Optional[str] = None) -> Dict[str, float]:
         """Get defensive impact metrics"""
         try:
+            season = season or _current_nba_season()
             url = f"{self.base_url}/stats/leaguedashptdefend"
             params = {
                 'Season': season,
@@ -145,13 +153,14 @@ class NBAApiClient:
         """Get official NBA team logo URL"""
         return f"https://cdn.nba.com/logos/nba/{team_abbreviation}/primary/L/logo.svg"
     
-    def get_live_player_stats(self, player_id: str) -> Dict[str, float]:
+    def get_live_player_stats(self, player_id: str, season: Optional[str] = None) -> Dict[str, float]:
         """Get current season stats for a player"""
         try:
+            season = season or _current_nba_season()
             url = f"{self.base_url}/stats/playerdashboardbyyearoveryear"
             params = {
                 'PlayerID': player_id,
-                'Season': '2024-25',
+                'Season': season,
                 'SeasonType': 'Regular Season'
             }
             

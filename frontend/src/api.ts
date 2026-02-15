@@ -19,6 +19,16 @@ api.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Pass client-local context so backend can resolve gameday by user timezone.
+    const now = new Date();
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+    const localDate = now.toLocaleDateString("en-CA"); // YYYY-MM-DD
+    const localTime = now.toLocaleTimeString("en-GB", { hour12: false }); // HH:mm:ss
+    config.headers["X-Client-Timezone"] = timezone;
+    config.headers["X-Client-Local-Date"] = localDate;
+    config.headers["X-Client-Local-Time"] = localTime;
+
     return config;
 });
 
@@ -80,6 +90,28 @@ export interface Team {
     stats: TeamStats[];
 }
 
+export interface TeamInsight {
+    team_id: number;
+    team_name: string;
+    team_abbr: string;
+    conference?: string | null;
+    division?: string | null;
+    current_record?: string | null;
+    logo_url?: string | null;
+    games_sampled: number;
+    opp_points?: number | null;
+    opp_rebounds?: number | null;
+    opp_assists?: number | null;
+    opp_stocks?: number | null;
+    points_rank_most_allowed?: number | null;
+    rebounds_rank_most_allowed?: number | null;
+    assists_rank_most_allowed?: number | null;
+    stocks_rank_most_allowed?: number | null;
+    overall_easiest_rank?: number | null;
+    strengths: string[];
+    weaknesses: string[];
+}
+
 export interface Game {
     id: number;
     home_team_id: number;
@@ -104,7 +136,7 @@ export interface Recommendation {
     bet_type: string;
     recommended_pick: string;
     confidence_score: number;
-    reasoning: string;
+    reasoning: string | null;
     timestamp: string;
 }
 
@@ -125,13 +157,24 @@ export interface GameTracker {
     message?: string;
 }
 
-export const fetchGames = async (): Promise<Game[]> => {
-    const { data } = await api.get("/games/");
+export const fetchGames = async (date?: string): Promise<Game[]> => {
+    const params = date ? { date } : {};
+    const { data } = await api.get("/games/", { params });
+    return data;
+};
+
+export const fetchAvailableDates = async (): Promise<string[]> => {
+    const { data } = await api.get<string[]>("/games/available-dates");
     return data;
 };
 
 export const fetchRecommendations = async (): Promise<Recommendation[]> => {
     const { data } = await api.get("/recommendations/");
+    return data;
+};
+
+export const fetchTeamInsights = async (): Promise<TeamInsight[]> => {
+    const { data } = await api.get<TeamInsight[]>("/teams/insights");
     return data;
 };
 
@@ -179,6 +222,7 @@ export interface AdvancedProp {
 export interface AdvancedPropsResponse {
     total: number;
     props: AdvancedProp[];
+    date_used?: string;
 }
 
 export const fetchAdvancedProps = async (minEv: number = 0, minKelly: number = 0, date?: string, overUnder?: string): Promise<AdvancedPropsResponse> => {
@@ -218,6 +262,7 @@ export interface GeniusPick {
 export interface GeniusPicksResponse {
     genius_count: number;
     picks: GeniusPick[];
+    date_used?: string;
 }
 
 export const fetchGeniusPicks = async (date?: string): Promise<GeniusPicksResponse> => {
@@ -232,6 +277,10 @@ export interface ParlayLeg {
     pick: string;
     odds: number;
     confidence: number;
+    player_name?: string | null;
+    player_headshot?: string | null;
+    opponent?: string | null;
+    matchup?: string | null;
 }
 
 export interface ParlayResponse {
@@ -239,10 +288,15 @@ export interface ParlayResponse {
     combined_odds: number;
     potential_payout: number;
     confidence_score: number;
+    date_used?: string;
 }
 
-export const fetchMixedParlay = async (legs: number, riskLevel: string = "balanced"): Promise<ParlayResponse> => {
-    const { data } = await api.post<ParlayResponse>(`/recommendations/generate-mixed-parlay?legs=${legs}&risk_level=${riskLevel}`);
+export const fetchMixedParlay = async (legs: number, riskLevel: string = "balanced", date?: string): Promise<ParlayResponse> => {
+    let url = `/recommendations/generate-mixed-parlay?legs=${legs}&risk_level=${riskLevel}`;
+    if (date) {
+        url += `&date=${date}`;
+    }
+    const { data } = await api.post<ParlayResponse>(url);
     return data;
 };
 

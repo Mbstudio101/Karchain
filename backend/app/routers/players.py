@@ -36,23 +36,13 @@ def list_players(date: date = None, skip: int = 0, limit: int = 100, db: Session
         ).subquery()
         
         query = query.filter(models.Player.team_id.in_(active_teams_subquery))
-    else:
-        # default to showing players with stats
-        query = query.filter(exists().where(models.PlayerStats.player_id == models.Player.id))
+    
+    # Return players that have at least one recorded stat row.
+    # This prevents empty cards in the frontend player directory.
+    query = query.filter(exists().where(models.PlayerStats.player_id == models.Player.id))
 
     players = query.offset(skip).limit(limit).all()
     return players
-
-@router.get("/{player_id}", response_model=schemas.PlayerBase)
-def get_player(player_id: int, db: Session = Depends(get_db)):
-    """Get a specific player with all their stats."""
-    player = db.query(models.Player).options(
-        joinedload(models.Player.stats)
-    ).filter(models.Player.id == player_id).first()
-    
-    if player is None:
-        raise HTTPException(status_code=404, detail="Player not found")
-    return player
 
 @router.get("/team/{team_id}", response_model=List[schemas.PlayerBase])
 def get_players_by_team(team_id: int, db: Session = Depends(get_db)):
@@ -101,3 +91,15 @@ def get_all_props(date: date = None, skip: int = 0, limit: int = 100, db: Sessio
         
     props = query.order_by(models.PlayerProps.timestamp.desc()).offset(skip).limit(limit).all()
     return props
+
+
+@router.get("/{player_id}", response_model=schemas.PlayerBase)
+def get_player(player_id: int, db: Session = Depends(get_db)):
+    """Get a specific player with all their stats."""
+    player = db.query(models.Player).options(
+        joinedload(models.Player.stats)
+    ).filter(models.Player.id == player_id).first()
+
+    if player is None:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return player

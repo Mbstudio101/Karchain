@@ -9,6 +9,11 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+def _current_nba_season(reference: datetime = None) -> str:
+    reference = reference or datetime.utcnow()
+    start_year = reference.year if reference.month >= 7 else reference.year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
 class NBAScraper(BaseScraper):
     def __init__(self, headless: bool = True):
         super().__init__(headless)
@@ -16,6 +21,7 @@ class NBAScraper(BaseScraper):
 
     async def scrape_team_stats(self):
         """Scrapes team stats from NBA.com/stats API using requests."""
+        season = _current_nba_season()
         url = "https://stats.nba.com/stats/leaguedashteamstats"
         params = {
             "MeasureType": "Base",
@@ -24,7 +30,7 @@ class NBAScraper(BaseScraper):
             "PaceAdjust": "N",
             "Rank": "N",
             "LeagueID": "00",
-            "Season": "2024-25",
+            "Season": season,
             "SeasonType": "Regular Season",
             "PORound": "0",
             "Outcome": "",
@@ -92,12 +98,22 @@ class NBAScraper(BaseScraper):
                 # Calculate opponent ppg
                 opp_ppg = ppg - plus_minus
                 
-                self.save_team_stats(team_name, wins, losses, win_pct, ppg, opp_ppg, plus_minus)
+                self.save_team_stats(team_name, wins, losses, win_pct, ppg, opp_ppg, plus_minus, season)
 
         except Exception as e:
             logger.error(f"Error scraping team stats: {e}")
             
-    def save_team_stats(self, team_name: str, wins: int, losses: int, win_pct: float, ppg: float, opp_ppg: float, plus_minus: float):
+    def save_team_stats(
+        self,
+        team_name: str,
+        wins: int,
+        losses: int,
+        win_pct: float,
+        ppg: float,
+        opp_ppg: float,
+        plus_minus: float,
+        season: str,
+    ):
         team = self.db.query(Team).filter(Team.name == team_name).first()
         if not team:
             team = Team(name=team_name, sport="NBA")
@@ -111,7 +127,7 @@ class NBAScraper(BaseScraper):
         # Check if stats for this season already exist to avoid duplicates
         existing_stats = self.db.query(TeamStats).filter(
             TeamStats.team_id == team.id,
-            TeamStats.season == "2024-25"
+            TeamStats.season == season
         ).first()
 
         if existing_stats:
@@ -126,7 +142,7 @@ class NBAScraper(BaseScraper):
         else:
             stats = TeamStats(
                 team_id=team.id,
-                season="2024-25",
+                season=season,
                 wins=wins,
                 losses=losses,
                 win_pct=win_pct,
@@ -195,6 +211,7 @@ class NBAScraper(BaseScraper):
 
     async def scrape_player_stats(self):
         """Scrapes player game logs from NBA.com/stats API using requests."""
+        season = _current_nba_season()
         url = "https://stats.nba.com/stats/leaguegamelog"
         params = {
             "Counter": "1000",
@@ -203,7 +220,7 @@ class NBAScraper(BaseScraper):
             "Direction": "DESC",
             "LeagueID": "00",
             "PlayerOrTeam": "P",
-            "Season": "2024-25",
+            "Season": season,
             "SeasonType": "Regular Season",
             "Sorter": "DATE"
         }

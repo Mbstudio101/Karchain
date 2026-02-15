@@ -1,7 +1,27 @@
 from datetime import datetime, timedelta, date, timezone
+from zoneinfo import ZoneInfo
+from fastapi import Request
+from typing import Optional
+
+DEFAULT_TIMEZONE = "America/New_York"
+GAMEDAY_CUTOFF_HOUR = 5  # 5 AM local time
 
 
-def get_current_gameday() -> date:
+def _safe_zoneinfo(timezone_name: Optional[str]) -> ZoneInfo:
+    try:
+        return ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
+    except Exception:
+        return ZoneInfo(DEFAULT_TIMEZONE)
+
+
+def get_client_timezone(request: Optional[Request] = None) -> str:
+    if request is None:
+        return DEFAULT_TIMEZONE
+    tz = request.headers.get("X-Client-Timezone")
+    return tz if tz else DEFAULT_TIMEZONE
+
+
+def get_current_gameday(timezone_name: Optional[str] = None) -> date:
     """
     Returns the current active NBA gameday.
 
@@ -15,18 +35,15 @@ def get_current_gameday() -> date:
     This ensures that at 11 PM ET you're still seeing tonight's games,
     and at 6 AM ET you flip to the new day.
     """
-    # US Eastern is UTC-5 (ignoring DST for simplicity; EDT is UTC-4)
-    # For a more robust solution use pytz, but this covers NBA season well
-    utc_now = datetime.now(timezone.utc)
-    eastern_offset = timedelta(hours=-5)
-    eastern_now = utc_now + eastern_offset
+    tz = _safe_zoneinfo(timezone_name)
+    local_now = datetime.now(timezone.utc).astimezone(tz)
 
-    if eastern_now.hour < 5:
-        return (eastern_now - timedelta(days=1)).date()
-    return eastern_now.date()
+    if local_now.hour < GAMEDAY_CUTOFF_HOUR:
+        return (local_now - timedelta(days=1)).date()
+    return local_now.date()
 
 
-def get_gameday_range(target_date: date) -> tuple:
+def get_gameday_range(target_date: date, timezone_name: Optional[str] = None) -> tuple:
     """
     Returns (start_datetime_utc, end_datetime_utc) for a gameday.
 
@@ -39,7 +56,23 @@ def get_gameday_range(target_date: date) -> tuple:
 
     This 24-hour window in UTC captures ALL games for the Eastern-time gameday.
     """
-    # 5 AM ET = 10 AM UTC (EST, UTC-5)
-    start_utc = datetime(target_date.year, target_date.month, target_date.day, 10, 0, 0)
-    end_utc = start_utc + timedelta(hours=24)
+    tz = _safe_zoneinfo(timezone_name)
+    start_local = datetime(
+        target_date.year, target_date.month, target_date.day, GAMEDAY_CUTOFF_HOUR, 0, 0, tzinfo=tz
+    )
+    end_local = start_local + timedelta(hours=24)
+    start_utc = start_local.astimezone(timezone.utc).replace(tzinfo=None)
+    end_utc = end_local.astimezone(timezone.utc).replace(tzinfo=None)
     return start_utc, end_utc
+
+
+def game_datetime_to_gameday(game_dt: datetime, timezone_name: Optional[str] = None) -> date:
+    """
+    Convert stored UTC game datetime to user-local gameday using 5 AM cutoff.
+    """
+    tz = _safe_zoneinfo(timezone_name)
+    if game_dt.tzinfo is None:
+        game_dt = game_dt.replace(tzinfo=timezone.utc)
+    local_dt = game_dt.astimezone(tz)
+    shifted = local_dt - timedelta(hours=GAMEDAY_CUTOFF_HOUR)
+    return shifted.date()

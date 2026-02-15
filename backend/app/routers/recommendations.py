@@ -1,11 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List, Optional, Dict
 from datetime import date, datetime, timedelta
 from .. import models, schemas
 from ..dependencies import get_db
-from ..date_utils import get_current_gameday, get_gameday_range
+from ..date_utils import (
+    get_client_timezone,
+    get_current_gameday,
+    get_gameday_range,
+    game_datetime_to_gameday,
+)
 from ..analytics.prediction_tracker import PredictionTracker
 from ..analytics.self_improvement import SelfImprovementEngine
 
@@ -13,6 +18,39 @@ router = APIRouter(
     prefix="/recommendations",
     tags=["recommendations"]
 )
+
+def _resolve_target_date_with_props(db: Session, target_date: date, timezone_name: Optional[str] = None) -> date:
+    """
+    If target_date has no props-linked games, fallback to the latest date that does.
+    """
+    start_utc, end_utc = get_gameday_range(target_date, timezone_name)
+    has_target = db.query(models.PlayerProps.id).join(
+        models.Game, models.PlayerProps.game_id == models.Game.id
+    ).filter(
+        models.Game.game_date >= start_utc,
+        models.Game.game_date < end_utc
+    ).first()
+    if has_target:
+        return target_date
+
+    game_rows = db.query(models.Game.game_date).join(
+        models.PlayerProps, models.PlayerProps.game_id == models.Game.id
+    ).filter(
+        models.PlayerProps.game_id.isnot(None)
+    ).all()
+    available_gamedays = set()
+    for row in game_rows:
+        game_dt = row[0]
+        if isinstance(game_dt, str):
+            game_dt = datetime.fromisoformat(game_dt)
+        if game_dt is None:
+            continue
+        gameday = game_datetime_to_gameday(game_dt, timezone_name)
+        available_gamedays.add(gameday)
+
+    if available_gamedays:
+        return max(available_gamedays)
+    return target_date
 
 # =============================================================================
 # SHARED HELPERS
@@ -24,6 +62,99 @@ def _calculate_implied_prob(american_odds: int) -> float:
         return 100 / (american_odds + 100)
     else:
         return abs(american_odds) / (abs(american_odds) + 100)
+
+
+def _resolve_player_with_stats(db: Session, prop: models.PlayerProps) -> Optional[models.Player]:
+    """
+    Resolve a prop's player to the best matching player record that has stats.
+    Handles duplicate player rows (same name, different ids).
+    """
+    player = prop.player if hasattr(prop, "player") else None
+    if player is None and prop.player_id:
+        player = db.query(models.Player).filter(models.Player.id == prop.player_id).first()
+
+    if player and player.stats:
+        return player
+
+    if not player or not player.name:
+        return player
+
+    name_key = player.name.strip().lower()
+    alt = db.query(models.Player).join(
+        models.PlayerStats, models.PlayerStats.player_id == models.Player.id
+    ).filter(
+        func.lower(models.Player.name) == name_key
+    ).group_by(
+        models.Player.id
+    ).order_by(
+        func.count(models.PlayerStats.id).desc()
+    ).first()
+    return alt or player
+
+def _build_player_headshot_url(player: models.Player) -> Optional[str]:
+    if player.headshot_url:
+        return player.headshot_url
+    if player.id:
+        return f"https://cdn.nba.com/headshots/nba/latest/260x190/{player.id}.png"
+    return None
+
+def _build_matchup(game: Optional[models.Game]) -> Optional[str]:
+    if not game or not game.home_team or not game.away_team:
+        return None
+    return f"{game.away_team.name} @ {game.home_team.name}"
+
+def _infer_opponent_for_player(player: models.Player, game: Optional[models.Game]) -> Optional[str]:
+    if not game or not game.home_team or not game.away_team:
+        return None
+
+    # Primary mapping by team_id when IDs align.
+    if player.team_id == game.home_team_id:
+        return game.away_team.name
+    if player.team_id == game.away_team_id:
+        return game.home_team.name
+
+    # Secondary mapping by team name when IDs come from different sources.
+    player_team_name = player.team.name if getattr(player, "team", None) else None
+    if player_team_name == game.home_team.name:
+        return game.away_team.name
+    if player_team_name == game.away_team.name:
+        return game.home_team.name
+
+    return None
+
+
+def _reconcile_prop_player_ids(db: Session) -> int:
+    """
+    Re-link props attached to duplicate players (same name, no stats)
+    to the best matching player with actual game logs.
+    """
+    props = db.query(models.PlayerProps).options(joinedload(models.PlayerProps.player)).all()
+    updated = 0
+
+    for prop in props:
+        player = prop.player
+        if not player or not player.name:
+            continue
+        if player.stats:
+            continue
+
+        canonical = db.query(models.Player).join(
+            models.PlayerStats, models.PlayerStats.player_id == models.Player.id
+        ).filter(
+            func.lower(models.Player.name) == player.name.strip().lower()
+        ).group_by(
+            models.Player.id
+        ).order_by(
+            func.count(models.PlayerStats.id).desc()
+        ).first()
+
+        if canonical and canonical.id != prop.player_id:
+            prop.player_id = canonical.id
+            updated += 1
+
+    if updated > 0:
+        db.commit()
+    return updated
 
 
 def _calculate_pythagorean_win_pct(ppg: float, opp_ppg: float, exponent: float = 13.91) -> float:
@@ -218,19 +349,93 @@ def _get_grade(ev: float, edge: float, bp_agrees: bool = True, streak: str = "ne
 
 def _extract_prop_values(player, prop_type: str, stats_list) -> List[float]:
     """Extract stat values from player stats based on prop type."""
-    if prop_type == 'points':
+    key = (prop_type or "").lower()
+    if key == 'points':
         return [s.points or 0 for s in stats_list if s.points is not None]
-    elif prop_type == 'rebounds':
+    if key == 'rebounds':
         return [s.rebounds or 0 for s in stats_list if s.rebounds is not None]
-    elif prop_type == 'assists':
+    if key == 'assists':
         return [s.assists or 0 for s in stats_list if s.assists is not None]
-    elif prop_type == 'steals':
+    if key == 'steals':
         return [s.steals or 0 for s in stats_list if s.steals is not None]
-    elif prop_type == 'blocks':
+    if key == 'blocks':
         return [s.blocks or 0 for s in stats_list if s.blocks is not None]
-    elif prop_type == 'pts+reb+ast':
+    if key in ('threes', 'three_pointers', '3pm'):
+        return [s.three_pointers or 0 for s in stats_list if s.three_pointers is not None]
+    if key in ('turnovers', 'tov'):
+        return [s.turnovers or 0 for s in stats_list if s.turnovers is not None]
+    if key in ('pts+reb+ast', 'pra'):
         return [(s.points or 0) + (s.rebounds or 0) + (s.assists or 0) for s in stats_list]
+    if key in ('pts+reb', 'pr'):
+        return [(s.points or 0) + (s.rebounds or 0) for s in stats_list]
+    if key in ('pts+ast', 'pa'):
+        return [(s.points or 0) + (s.assists or 0) for s in stats_list]
+    if key in ('reb+ast', 'ra'):
+        return [(s.rebounds or 0) + (s.assists or 0) for s in stats_list]
+    if key == 'stocks':
+        return [(s.steals or 0) + (s.blocks or 0) for s in stats_list]
     return []
+
+
+def _season_start_year_for_game_date(game_date_val: Optional[date]) -> Optional[int]:
+    if game_date_val is None:
+        return None
+    return game_date_val.year if game_date_val.month >= 7 else game_date_val.year - 1
+
+
+def _sorted_player_stats(player) -> List:
+    return sorted(
+        [s for s in (player.stats or []) if s.game_date is not None],
+        key=lambda s: s.game_date
+    )
+
+
+def _extract_multiseason_prop_values(
+    player,
+    prop_type: str,
+    as_of_date: Optional[date] = None,
+) -> tuple:
+    """
+    Build a recency-prioritized multi-season sample for prop analysis.
+    Returns (values, season_sample_counts).
+    """
+    stats = _sorted_player_stats(player)
+    if as_of_date is not None:
+        stats = [s for s in stats if s.game_date <= as_of_date]
+    if not stats:
+        return [], {}
+
+    reference_date = as_of_date or stats[-1].game_date
+    current_start = _season_start_year_for_game_date(reference_date)
+    if current_start is None:
+        return [], {}
+
+    season_buckets: Dict[int, List] = {}
+    for s in stats:
+        season_start = _season_start_year_for_game_date(s.game_date)
+        if season_start is None:
+            continue
+        season_buckets.setdefault(season_start, []).append(s)
+
+    quotas = {
+        current_start: 30,
+        current_start - 1: 20,
+        current_start - 2: 12,
+    }
+    default_older_quota = 6
+
+    selected_stats = []
+    season_sample_counts: Dict[str, int] = {}
+    for season_start in sorted(season_buckets.keys()):
+        bucket = season_buckets[season_start]
+        picked = bucket[-quotas.get(season_start, default_older_quota):]
+        selected_stats.extend(picked)
+        season_key = f"{season_start}-{str(season_start + 1)[-2:]}"
+        season_sample_counts[season_key] = len(picked)
+
+    selected_stats.sort(key=lambda s: s.game_date)
+    values = _extract_prop_values(player, prop_type, selected_stats)
+    return values, season_sample_counts
 
 
 def _get_player_home_away_stats(player, prop_type: str, db: Session) -> tuple:
@@ -238,26 +443,39 @@ def _get_player_home_away_stats(player, prop_type: str, db: Session) -> tuple:
     home_values = []
     away_values = []
 
-    for stat in (player.stats or [])[:20]:
+    for stat in _sorted_player_stats(player)[-60:]:
         if not stat.game_id:
             continue
         game = db.query(models.Game).filter(models.Game.id == stat.game_id).first()
         if not game:
             continue
 
+        key = (prop_type or "").lower()
         val = 0
-        if prop_type == 'points':
+        if key == 'points':
             val = stat.points or 0
-        elif prop_type == 'rebounds':
+        elif key == 'rebounds':
             val = stat.rebounds or 0
-        elif prop_type == 'assists':
+        elif key == 'assists':
             val = stat.assists or 0
-        elif prop_type == 'steals':
+        elif key == 'steals':
             val = stat.steals or 0
-        elif prop_type == 'blocks':
+        elif key == 'blocks':
             val = stat.blocks or 0
-        elif prop_type == 'pts+reb+ast':
+        elif key in ('threes', 'three_pointers', '3pm'):
+            val = stat.three_pointers or 0
+        elif key in ('turnovers', 'tov'):
+            val = stat.turnovers or 0
+        elif key in ('pts+reb+ast', 'pra'):
             val = (stat.points or 0) + (stat.rebounds or 0) + (stat.assists or 0)
+        elif key in ('pts+reb', 'pr'):
+            val = (stat.points or 0) + (stat.rebounds or 0)
+        elif key in ('pts+ast', 'pa'):
+            val = (stat.points or 0) + (stat.assists or 0)
+        elif key in ('reb+ast', 'ra'):
+            val = (stat.rebounds or 0) + (stat.assists or 0)
+        elif key == 'stocks':
+            val = (stat.steals or 0) + (stat.blocks or 0)
 
         if game.home_team_id == player.team_id:
             home_values.append(val)
@@ -269,12 +487,12 @@ def _get_player_home_away_stats(player, prop_type: str, db: Session) -> tuple:
 
 def _get_player_minutes(player) -> tuple:
     """Get recent minutes and season average minutes."""
-    stats = player.stats or []
+    stats = _sorted_player_stats(player)[-60:]
     if not stats:
         return [], 0.0
 
-    all_minutes = [s.minutes_played for s in stats[:20] if s.minutes_played and s.minutes_played > 0]
-    recent_minutes = all_minutes[:5] if all_minutes else []
+    all_minutes = [s.minutes_played for s in stats if s.minutes_played and s.minutes_played > 0]
+    recent_minutes = all_minutes[-5:] if all_minutes else []
     season_avg = sum(all_minutes) / len(all_minutes) if all_minutes else 0.0
 
     return recent_minutes, season_avg
@@ -391,12 +609,13 @@ def _create_rec(db, list_ref, game, bet_type, pick, confidence, reason,
 # =============================================================================
 
 @router.get("/", response_model=List[schemas.RecommendationBase])
-def get_recommendations(date: Optional[date] = None, db: Session = Depends(get_db)):
+def get_recommendations(request: Request, date: Optional[date] = None, db: Session = Depends(get_db)):
     """Returns recommendations. Defaults to today's games if no date provided."""
+    client_tz = get_client_timezone(request)
     if date is None:
-        date = get_current_gameday()
+        date = get_current_gameday(client_tz)
 
-    start_utc, end_utc = get_gameday_range(date)
+    start_utc, end_utc = get_gameday_range(date, client_tz)
     recs = db.query(models.Recommendation).join(models.Game).filter(
         models.Game.game_date >= start_utc,
         models.Game.game_date < end_utc
@@ -606,12 +825,13 @@ def generate_recommendations(db: Session = Depends(get_db)):
 
 
 @router.post("/generate-parlay", response_model=schemas.ParlayBase)
-def generate_parlay(legs: int = 3, db: Session = Depends(get_db)):
+def generate_parlay(request: Request, legs: int = 3, date: Optional[date] = None, db: Session = Depends(get_db)):
     """Generate an AI-powered parlay for today's games with correlation awareness."""
     from ..analytics.advanced_stats import detect_correlation, calculate_parlay_correlation_penalty
 
-    target_date = date if date is not None else get_current_gameday()
-    start_of_day, end_of_day = get_gameday_range(target_date)
+    client_tz = get_client_timezone(request)
+    target_date = date if date is not None else get_current_gameday(client_tz)
+    start_of_day, end_of_day = get_gameday_range(target_date, client_tz)
 
     top_recs = db.query(models.Recommendation).join(
         models.Game, models.Recommendation.game_id == models.Game.id
@@ -646,6 +866,7 @@ def generate_parlay(legs: int = 3, db: Session = Depends(get_db)):
             'rec': rec,
             'game_id': rec.game_id,
             'team_id': game.home_team_id if rec.recommended_pick == game.home_team.name else game.away_team_id,
+            'matchup': _build_matchup(game),
             'odds': american_odds,
             'confidence': rec.confidence_score,
             'bet_type': rec.bet_type
@@ -695,7 +916,8 @@ def generate_parlay(legs: int = 3, db: Session = Depends(get_db)):
             game_id=bet['game_id'],
             pick=f"{bet['rec'].recommended_pick} ({bet['bet_type']})",
             odds=odds,
-            confidence=bet['confidence']
+            confidence=bet['confidence'],
+            matchup=bet.get('matchup'),
         ))
 
     # Apply correlation penalty to confidence
@@ -718,12 +940,13 @@ def generate_parlay(legs: int = 3, db: Session = Depends(get_db)):
         legs=parlay_legs,
         combined_odds=combined_american,
         potential_payout=round(potential_payout, 2),
-        confidence_score=round(adjusted_confidence, 2)
+        confidence_score=round(adjusted_confidence, 2),
+        date_used=target_date
     )
 
 
 @router.post("/generate-mixed-parlay", response_model=schemas.ParlayBase)
-def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int = None, db: Session = Depends(get_db)):
+def generate_mixed_parlay(request: Request, legs: int = 5, risk_level: str = "balanced", seed: int = None, date: Optional[date] = None, db: Session = Depends(get_db)):
     """
     Generate an AI-powered parlay mixing player props with game bets.
     Enhanced with reconstructed NBA data: clutch performance, tracking metrics,
@@ -733,11 +956,19 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
         legs: Number of parlay legs (default: 5)
         risk_level: Risk level - 'conservative', 'balanced', or 'aggressive' (default: 'balanced')
         seed: Random seed for deterministic results (optional, for testing)
+        date: Target date for the parlay (optional, defaults to current gameday)
     """
-    target_date = date if date is not None else get_current_gameday()
-    start_of_day, end_of_day = get_gameday_range(target_date)
+    client_tz = get_client_timezone(request)
+    target_date = date if date is not None else get_current_gameday(client_tz)
+    _reconcile_prop_player_ids(db)
+    target_date = _resolve_target_date_with_props(db, target_date, client_tz)
+    start_of_day, end_of_day = get_gameday_range(target_date, client_tz)
 
     try:
+        # Enhanced mixed-parlay path calls external analytics repeatedly and is unstable.
+        # Use local legacy pipeline for deterministic availability.
+        raise RuntimeError("Use legacy mixed parlay pipeline")
+
         # Use enhanced parlay generator with reconstructed NBA data
         from ..analytics.enhanced_parlay_generator import EnhancedParlayGenerator
         import random
@@ -758,7 +989,17 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
                 # Look up game_id from player props
                 player = db.query(models.Player).filter(
                     models.Player.name == leg.get('player', '')
-                ).first()
+                ).order_by(models.Player.id.desc()).first()
+                if player:
+                    alt_player = db.query(models.Player).join(
+                        models.PlayerStats, models.PlayerStats.player_id == models.Player.id
+                    ).filter(
+                        func.lower(models.Player.name) == player.name.lower()
+                    ).group_by(models.Player.id).order_by(
+                        func.count(models.PlayerStats.id).desc()
+                    ).first()
+                    if alt_player:
+                        player = alt_player
                 game_id = 0
                 if player:
                     prop = db.query(models.PlayerProps).join(
@@ -770,13 +1011,21 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
                     ).first()
                     if prop and prop.game_id:
                         game_id = prop.game_id
+                    if game_id == 0:
+                        latest_prop = db.query(models.PlayerProps).filter(
+                            models.PlayerProps.player_id == player.id,
+                            models.PlayerProps.game_id.isnot(None)
+                        ).order_by(models.PlayerProps.timestamp.desc()).first()
+                        if latest_prop and latest_prop.game_id:
+                            game_id = latest_prop.game_id
 
                 pick_str = f"{leg.get('player', '')} {leg.get('prop_type', '').upper()} {leg['pick']} {leg.get('line', '')}"
                 parlay_legs.append(schemas.ParlayLeg(
                     game_id=game_id,
                     pick=pick_str,
                     odds=int(leg.get('odds', -110)),
-                    confidence=float(leg.get('hit_rate', leg.get('confidence_score', 0.5)))
+                    confidence=float(leg.get('hit_rate', leg.get('confidence_score', 0.5))),
+                    player_name=leg.get('player'),
                 ))
             else:  # game bet
                 # Find game_id from recommendation
@@ -786,20 +1035,30 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
                 ).order_by(models.Recommendation.timestamp.desc()).first()
                 if rec:
                     game_id = rec.game_id
+                if game_id == 0:
+                    latest_rec = db.query(models.Recommendation).filter(
+                        models.Recommendation.game_id.isnot(None)
+                    ).order_by(models.Recommendation.timestamp.desc()).first()
+                    if latest_rec:
+                        game_id = latest_rec.game_id
 
                 pick_str = f"{leg.get('pick', '')} ({leg.get('bet_type', 'Spread')})"
                 parlay_legs.append(schemas.ParlayLeg(
                     game_id=game_id,
                     pick=pick_str,
                     odds=int(leg.get('odds', -110)),
-                    confidence=float(leg.get('confidence', 0.5))
+                    confidence=float(leg.get('confidence', 0.5)),
                 ))
+
+        if not parlay_legs or any(leg.game_id == 0 for leg in parlay_legs):
+            raise ValueError("Enhanced parlay produced invalid legs")
 
         return schemas.ParlayBase(
             legs=parlay_legs,
             combined_odds=int(result['combined_odds']),
             potential_payout=round(result['payout'], 2),
-            confidence_score=round(result['avg_confidence'], 2)
+            confidence_score=round(result['avg_confidence'], 2),
+            date_used=target_date
         )
         
     except Exception as e:
@@ -811,8 +1070,9 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
             StreakStatus, BetConfidence
         )
 
-    target_date = date if date is not None else get_current_gameday()
-    start_of_day, end_of_day = get_gameday_range(target_date)
+    target_date = date if date is not None else get_current_gameday(client_tz)
+    target_date = _resolve_target_date_with_props(db, target_date, client_tz)
+    start_of_day, end_of_day = get_gameday_range(target_date, client_tz)
 
     league_avg_defense = _get_league_avg_defense(db)
     league_avg_pace = _get_league_avg_pace(db)
@@ -822,18 +1082,26 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
     props = db.query(models.PlayerProps).join(
         models.Game, models.PlayerProps.game_id == models.Game.id
     ).options(
-        joinedload(models.PlayerProps.player).joinedload(models.Player.stats)
+        joinedload(models.PlayerProps.player),
+        joinedload(models.PlayerProps.player).joinedload(models.Player.stats),
+        joinedload(models.PlayerProps.player).joinedload(models.Player.team),
+        joinedload(models.PlayerProps.game).joinedload(models.Game.home_team),
+        joinedload(models.PlayerProps.game).joinedload(models.Game.away_team),
     ).filter(
         models.Game.game_date >= start_of_day,
         models.Game.game_date <= end_of_day
     ).all()
 
     for prop in props:
-        player = prop.player
+        player = _resolve_player_with_stats(db, prop)
         if not player or not player.stats or len(player.stats) < 5:
             continue
 
-        values = _extract_prop_values(player, prop.prop_type, player.stats[:15])
+        values, season_sample_counts = _extract_multiseason_prop_values(
+            player,
+            prop.prop_type,
+            as_of_date=target_date,
+        )
         if len(values) < 5:
             continue
 
@@ -869,13 +1137,17 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
             'game_id': prop.game_id or 0,
             'player_id': player.id,
             'player_name': player.name,
+            'player_headshot': _build_player_headshot_url(player),
+            'opponent': _infer_opponent_for_player(player, prop.game),
+            'matchup': _build_matchup(prop.game),
             'team_id': player.team_id,
             'prop_type': prop.prop_type,
             'pick': f"{player.name} {prop.prop_type.upper()} {analysis.recommendation.upper()} {prop.line}",
             'odds': odds,
             'confidence': min(0.95, 0.5 + edge),
             'edge': edge,
-            'bp_agrees': analysis_kwargs.get('bp_recommended_side', '').lower() == analysis.recommendation if analysis_kwargs.get('bp_recommended_side') else True
+            'bp_agrees': analysis_kwargs.get('bp_recommended_side', '').lower() == analysis.recommendation if analysis_kwargs.get('bp_recommended_side') else True,
+            'season_sample_counts': season_sample_counts,
         })
 
     # Get best game bets for TODAY only
@@ -912,6 +1184,7 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
             'game_id': rec.game_id,
             'team_id': team_id,
             'pick': f"{rec.recommended_pick} ({rec.bet_type})",
+            'matchup': _build_matchup(game),
             'odds': odds,
             'confidence': rec.confidence_score,
             'edge': rec.confidence_score - 0.5
@@ -977,8 +1250,12 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
                 used_games.add(gid)
 
     if len(selected) < legs:
-        raise HTTPException(status_code=400,
-                           detail=f"Not enough unique bets available. Found {len(selected)} unique, need {legs}.")
+        if len(selected) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Not enough unique bets available. Found {len(selected)} unique, need at least 2."
+            )
+        legs = len(selected)
 
     # Calculate correlation penalty (Phase 5b)
     correlation_penalty = calculate_parlay_correlation_penalty(selected)
@@ -1004,7 +1281,11 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
             game_id=bet.get('game_id', 0),
             pick=bet['pick'],
             odds=odds,
-            confidence=bet['confidence']
+            confidence=bet['confidence'],
+            player_name=bet.get('player_name'),
+            player_headshot=bet.get('player_headshot'),
+            opponent=bet.get('opponent'),
+            matchup=bet.get('matchup'),
         ))
 
     if combined_decimal >= 2:
@@ -1026,12 +1307,13 @@ def generate_mixed_parlay(legs: int = 5, risk_level: str = "balanced", seed: int
         legs=parlay_legs,
         combined_odds=combined_american,
         potential_payout=round(potential_payout, 2),
-        confidence_score=round(adjusted_confidence, 2)
+        confidence_score=round(adjusted_confidence, 2),
+        date_used=target_date
     )
 
 
 @router.get("/advanced-props")
-def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, date: Optional[date] = None, over_under: Optional[str] = None, db: Session = Depends(get_db)):
+def get_advanced_props(request: Request, min_ev: float = 0, min_kelly: float = 0, date: Optional[date] = None, over_under: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Get player props with advanced analytics.
     Now with: opponent defense (1a), pace (1a), BettingPros (1b),
@@ -1044,8 +1326,11 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, date: Optional[d
         StreakStatus, BetConfidence
     )
 
-    target_date = date if date is not None else get_current_gameday()
-    start_of_day, end_of_day = get_gameday_range(target_date)
+    client_tz = get_client_timezone(request)
+    target_date = date if date is not None else get_current_gameday(client_tz)
+    _reconcile_prop_player_ids(db)
+    target_date = _resolve_target_date_with_props(db, target_date, client_tz)
+    start_of_day, end_of_day = get_gameday_range(target_date, client_tz)
 
     league_avg_defense = _get_league_avg_defense(db)
     league_avg_pace = _get_league_avg_pace(db)
@@ -1054,6 +1339,7 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, date: Optional[d
     props = db.query(models.PlayerProps).join(
         models.Game, models.PlayerProps.game_id == models.Game.id
     ).options(
+        joinedload(models.PlayerProps.player),
         joinedload(models.PlayerProps.game).joinedload(models.Game.home_team),
         joinedload(models.PlayerProps.game).joinedload(models.Game.away_team)
     ).filter(
@@ -1064,7 +1350,10 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, date: Optional[d
     analyzed_props = []
 
     for prop in props:
-        player = db.query(models.Player).options(joinedload(models.Player.team)).filter(models.Player.id == prop.player_id).first()
+        player = _resolve_player_with_stats(db, prop)
+        if player:
+            db.refresh(player)
+            player = db.query(models.Player).options(joinedload(models.Player.team)).filter(models.Player.id == player.id).first()
         if not player or not player.stats:
             continue
 
@@ -1082,11 +1371,11 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, date: Optional[d
             elif injury.status == "Probable":
                 injury_mod = 0.95
 
-        stats_list = player.stats[:20]
-        if not stats_list:
-            continue
-
-        values = _extract_prop_values(player, prop.prop_type, stats_list)
+        values, season_sample_counts = _extract_multiseason_prop_values(
+            player,
+            prop.prop_type,
+            as_of_date=target_date,
+        )
         if len(values) < 5:
             continue
 
@@ -1158,6 +1447,7 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, date: Optional[d
             "confidence_level": analysis.confidence.value,
             "recommendation": analysis.recommendation,
             "sample_size": analysis.sample_size,
+            "season_sample_counts": season_sample_counts,
             "confidence_interval": {
                 "low": round(analysis.confidence_interval[0] * 100, 1),
                 "high": round(analysis.confidence_interval[1] * 100, 1)
@@ -1176,25 +1466,35 @@ def get_advanced_props(min_ev: float = 0, min_kelly: float = 0, date: Optional[d
 
     return {
         "total": len(analyzed_props),
-        "props": analyzed_props[:500]
+        "props": analyzed_props[:500],
+        "date_used": target_date.isoformat(),
     }
 
 
 @router.get("/genius-picks")
-def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db)):
+def get_genius_picks(request: Request, date: Optional[date] = None, db: Session = Depends(get_db)):
     """
     Get the absolute BEST picks with full intelligence stack.
     Enhanced with reconstructed NBA data: clutch performance, tracking metrics,
     athletic analytics, and advanced ML-enhanced predictions.
     """
+    client_tz = get_client_timezone(request)
     if date is None:
-        date = get_current_gameday()
+        date = get_current_gameday(client_tz)
+    _reconcile_prop_player_ids(db)
+    date = _resolve_target_date_with_props(db, date, client_tz)
 
     try:
+        # Enhanced mode relies on multiple live external calls and can stall request latency.
+        # Default to the proven local analytics path for stable UX.
+        raise RuntimeError("Use legacy genius picks pipeline")
+
         # Use enhanced genius picks system with reconstructed NBA data
         from ..analytics.enhanced_genius_picks import get_enhanced_genius_picks
         
         result = get_enhanced_genius_picks(target_date=date, min_edge=0.03)
+        if not result.get("picks"):
+            raise ValueError("Enhanced genius picks returned no picks")
         
         # Add metadata about data sources
         result['data_sources'] = {
@@ -1223,7 +1523,7 @@ def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db))
         league_avg_pace = _get_league_avg_pace(db)
 
         # 1. Player Props (Elite Only) — filtered by date
-        start_utc, end_utc = get_gameday_range(date)
+        start_utc, end_utc = get_gameday_range(date, client_tz)
         props = db.query(models.PlayerProps).join(models.Game).filter(
             models.Game.game_date >= start_utc,
             models.Game.game_date < end_utc
@@ -1231,7 +1531,7 @@ def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db))
         genius_picks = []
 
     for prop in props:
-        player = db.query(models.Player).filter(models.Player.id == prop.player_id).first()
+        player = _resolve_player_with_stats(db, prop)
         if not player or not player.stats:
             continue
 
@@ -1242,11 +1542,11 @@ def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db))
         if injury and injury.status in ["Out", "Questionable"]:
             continue
 
-        stats_list = player.stats[:20]
-        if len(stats_list) < 10:
-            continue
-
-        values = _extract_prop_values(player, prop.prop_type, stats_list)
+        values, season_sample_counts = _extract_multiseason_prop_values(
+            player,
+            prop.prop_type,
+            as_of_date=date,
+        )
         if len(values) < 10:
             continue
 
@@ -1295,6 +1595,7 @@ def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db))
             "streak": analysis.streak_status.value,
             "confidence_range": f"{round(ci_low * 100)}-{round(ci_high * 100)}%",
             "grade": grade,
+            "season_sample_counts": season_sample_counts,
             # New enriched fields
             "bp_star_rating": prop.star_rating,
             "bp_agrees": bp_agrees,
@@ -1379,5 +1680,6 @@ def get_genius_picks(date: Optional[date] = None, db: Session = Depends(get_db))
 
     return {
         "genius_count": len(genius_picks),
-        "picks": genius_picks[:20]
+        "picks": genius_picks[:20],
+        "date_used": date.isoformat(),
     }

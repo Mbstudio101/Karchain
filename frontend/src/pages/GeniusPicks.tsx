@@ -1,20 +1,57 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchGeniusPicks } from "../api";
-import { Brain, Flame, Snowflake, RefreshCw, Award, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Brain, Flame, Snowflake, RefreshCw, Award, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAvailableDates } from "../hooks/useAvailableDates";
+import { getLocalISODate } from "../lib/utils";
 
 export const GeniusPicksPage: React.FC = () => {
+    const queryClient = useQueryClient();
+    const { availableDates, defaultDate } = useAvailableDates();
+    
     const [selectedDate, setSelectedDate] = useState(() => {
-        // Default to current date in YYYY-MM-DD format
-        return new Date().toISOString().split('T')[0];
+        // Use the next available date if available, otherwise today
+        return defaultDate || getLocalISODate();
     });
+
+    // Update selected date when default date is available
+    useEffect(() => {
+        if (defaultDate) {
+            setSelectedDate(defaultDate);
+        }
+    }, [defaultDate]);
+
+    const displayedDates = useMemo(() => (
+        availableDates.includes(selectedDate) ? availableDates : [selectedDate, ...availableDates]
+    ), [availableDates, selectedDate]);
 
     const { data, isLoading, refetch, isFetching } = useQuery({
         queryKey: ["geniusPicks", selectedDate],
         queryFn: () => fetchGeniusPicks(selectedDate),
         staleTime: 1000 * 60 * 5
     });
+
+    useEffect(() => {
+        if (data?.date_used && data.date_used !== selectedDate) {
+            setSelectedDate(data.date_used);
+        }
+    }, [data?.date_used, selectedDate]);
+
+    // Listen for WebSocket updates
+    useEffect(() => {
+        const handleUpdates = () => {
+            queryClient.invalidateQueries({ queryKey: ["geniusPicks"] });
+        };
+
+        window.addEventListener("gamesUpdated", handleUpdates);
+        window.addEventListener("propsUpdated", handleUpdates);
+        
+        return () => {
+            window.removeEventListener("gamesUpdated", handleUpdates);
+            window.removeEventListener("propsUpdated", handleUpdates);
+        };
+    }, [queryClient]);
 
     const getStreakIcon = (streak: string) => {
         if (streak === "hot") return <Flame size={14} className="text-orange-400" />;
@@ -53,28 +90,33 @@ export const GeniusPicksPage: React.FC = () => {
                         onClick={() => {
                             const prevDate = new Date(selectedDate);
                             prevDate.setDate(prevDate.getDate() - 1);
-                            setSelectedDate(prevDate.toISOString().split('T')[0]);
+                            setSelectedDate(getLocalISODate(prevDate));
                         }}
                         className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
                         title="Previous Day"
                     >
                         <ChevronLeft size={16} />
                     </button>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg">
-                        <Calendar size={16} className="text-muted" />
-                        <span className="text-sm font-medium">
-                            {new Date(selectedDate).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric',
-                                year: 'numeric'
-                            })}
-                        </span>
-                    </div>
+                    <select
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium"
+                    >
+                        {displayedDates.map(date => (
+                            <option key={date} value={date}>
+                                {new Date(date).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                })}
+                            </option>
+                        ))}
+                    </select>
                     <button
                         onClick={() => {
                             const nextDate = new Date(selectedDate);
                             nextDate.setDate(nextDate.getDate() + 1);
-                            setSelectedDate(nextDate.toISOString().split('T')[0]);
+                            setSelectedDate(getLocalISODate(nextDate));
                         }}
                         className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
                         title="Next Day"
@@ -131,8 +173,15 @@ export const GeniusPicksPage: React.FC = () => {
             ) : !data?.picks?.length ? (
                 <div className="text-center py-16 text-muted">
                     <Brain size={48} className="mx-auto mb-4 opacity-20" />
-                    <p>No genius picks available right now</p>
-                    <p className="text-xs opacity-50 mt-1">Requires 10+ game sample with 5%+ edge</p>
+                    <p>No genius picks available for {new Date(selectedDate).toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: 'numeric',
+                        year: 'numeric'
+                    })}</p>
+                    <p className="text-xs opacity-50 mt-1">Try selecting a different date or check back later</p>
+                    {availableDates.length > 1 && (
+                        <p className="text-xs opacity-50 mt-1">Available dates: {availableDates.join(', ')}</p>
+                    )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -28,6 +28,11 @@ from app.models_nba_official import NBAOfficialPlayerStats, NBAOfficialTeamStats
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def _current_nba_season(reference: Optional[datetime] = None) -> str:
+    reference = reference or datetime.utcnow()
+    start_year = reference.year if reference.month >= 7 else reference.year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
 class KarchainNBAFetcher:
     """
     Production-ready NBA data fetcher that uses advanced browser impersonation
@@ -138,8 +143,9 @@ class KarchainNBAFetcher:
         logger.error(f"❌ Failed to fetch {endpoint} after {max_retries} attempts")
         return None
 
-    def fetch_hustle_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+    def fetch_hustle_stats(self, season: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch player hustle statistics"""
+        season = season or _current_nba_season()
         params = {
             'Season': season,
             'SeasonType': 'Regular Season',
@@ -157,8 +163,9 @@ class KarchainNBAFetcher:
             return df
         return None
 
-    def fetch_defense_stats(self, season: str = "2023-24") -> Optional[pd.DataFrame]:
+    def fetch_defense_stats(self, season: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch player defense statistics"""
+        season = season or _current_nba_season()
         params = {
             'Season': season,
             'SeasonType': 'Regular Season',
@@ -246,8 +253,9 @@ class KarchainNBAFetcher:
             # Don't raise, just log error so other stats can still be processed
             pass
 
-    def run_sync(self, season: str = "2023-24"):
+    def run_sync(self, season: Optional[str] = None):
         """Run full synchronization of all hidden stats"""
+        season = season or _current_nba_season()
         logger.info(f"🚀 Starting Karchain NBA Sync for {season}...")
         
         # 1. Fetch Hustle Stats

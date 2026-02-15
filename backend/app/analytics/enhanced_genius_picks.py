@@ -485,3 +485,11 @@ class EnhancedGeniusPicks:
             return "B"
         else:
             return "C"
+
+
+def get_enhanced_genius_picks(target_date: date = None, min_edge: float = 0.03) -> Dict:
+    """
+    Module-level wrapper used by routers.recommendations.
+    """
+    engine = EnhancedGeniusPicks()
+    return engine.get_enhanced_genius_picks(target_date=target_date, min_edge=min_edge)

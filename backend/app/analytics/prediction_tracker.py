@@ -14,6 +14,11 @@ from ..models_nba_official import NBAOfficialPlayerStats
 
 logger = logging.getLogger(__name__)
 
+def _current_nba_season(reference: Optional[datetime] = None) -> str:
+    reference = reference or datetime.utcnow()
+    start_year = reference.year if reference.month >= 7 else reference.year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
 class PredictionTracker:
     """Tracks prediction outcomes and provides feedback for model improvement."""
     
@@ -24,13 +29,14 @@ class PredictionTracker:
     def capture_feature_snapshot(self, game: Game) -> Dict:
         """Capture comprehensive feature snapshot for ML model prediction."""
         try:
+            season = _current_nba_season()
             # Get basic rolling stats
             home_stats = self.feature_engineer.get_team_rolling_stats(game.home_team_id, game.game_date)
             away_stats = self.feature_engineer.get_team_rolling_stats(game.away_team_id, game.game_date)
             
             # Get hustle and defense stats (using current season)
-            home_hustle = self.feature_engineer.get_team_hustle_defense_stats(game.home_team_id, "2023-24")
-            away_hustle = self.feature_engineer.get_team_hustle_defense_stats(game.away_team_id, "2023-24")
+            home_hustle = self.feature_engineer.get_team_hustle_defense_stats(game.home_team_id, season)
+            away_hustle = self.feature_engineer.get_team_hustle_defense_stats(game.away_team_id, season)
             
             # Get betting odds snapshot
             betting_odds = self.db.query(BettingOdds).filter(

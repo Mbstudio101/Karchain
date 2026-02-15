@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0a;
-  --color-foreground: #ededed;
-  --color-card: #171717;
-  --color-hover: #262626;
-  --color-primary: #10b981;
-  --color-secondary: #3b82f6;
-  --color-accent: #8b5cf6;
-  --color-muted: #404040;
-  --color-border: #262626;
+  --color-background: #050918;
+  --color-foreground: #f6f3e8;
+  --color-card: #0c132c;
+  --color-hover: #1a2140;
+  --color-primary: #19d9a0;
+  --color-secondary: #d3aa4a;
+  --color-accent: #28c3ff;
+  --color-muted: #7381a8;
+  --color-border: #222d52;
 
-  --font-sans: Inter, system-ui, sans-serif;
+  --font-sans: "Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -21,10 +21,14 @@
 
 /* Base styles */
 body {
-  @apply bg-background text-foreground;
+  @apply text-foreground;
   font-family: var(--font-sans);
   font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(1200px 700px at 15% -10%, rgba(25, 217, 160, 0.16), transparent 50%),
+    radial-gradient(1000px 500px at 100% 0%, rgba(211, 170, 74, 0.15), transparent 45%),
+    linear-gradient(180deg, #07102a 0%, #040814 100%);
 }
 
 /* Main Content Safe Area */
@@ -39,11 +43,11 @@ main {
 }
 
 ::-webkit-scrollbar-track {
-  background-color: var(--color-background);
+  background-color: #0a1026;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--color-muted);
+  background: linear-gradient(180deg, rgba(25, 217, 160, 0.45), rgba(211, 170, 74, 0.45));
   border-radius: 9999px;
 }
 

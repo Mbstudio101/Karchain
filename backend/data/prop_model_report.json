@@ -1,0 +1,226 @@
+{
+  "generated_at_utc": "2026-02-15T17:15:41.795402",
+  "seasons_used": [
+    "2023-24",
+    "2024-25",
+    "2025-26"
+  ],
+  "markets": {
+    "PTS": {
+      "status": "trained",
+      "train_samples": 49410,
+      "test_samples": 12353,
+      "mae": 4.582,
+      "proxy_line_hit_rate": {
+        "hit_rate": 0.5522,
+        "samples": 11898,
+        "pushes": 455
+      },
+      "real_line_hit_rate": {
+        "hit_rate": 0.6667,
+        "samples": 3,
+        "pushes": 0
+      },
+      "model_path": "/Users/marvens/Desktop/Karchain/backend/models/prop_models/pts_rf.joblib",
+      "features": [
+        "days_rest",
+        "is_b2b",
+        "is_big",
+        "is_guard",
+        "last10_avg",
+        "last10_std",
+        "last20_avg",
+        "last5_avg",
+        "last5_std",
+        "line_proxy",
+        "minutes_last10_avg",
+        "minutes_last5_avg",
+        "opp_allowed_ast",
+        "opp_allowed_pts",
+        "opp_allowed_reb",
+        "season_avg",
+        "trend_last5_minus_last10"
+      ]
+    },
+    "PRA": {
+      "status": "trained",
+      "train_samples": 49410,
+      "test_samples": 12353,
+      "mae": 6.0202,
+      "proxy_line_hit_rate": {
+        "hit_rate": 0.5567,
+        "samples": 12014,
+        "pushes": 339
+      },
+      "real_line_hit_rate": {
+        "hit_rate": 0.3333,
+        "samples": 6,
+        "pushes": 0
+      },
+      "model_path": "/Users/marvens/Desktop/Karchain/backend/models/prop_models/pra_rf.joblib",
+      "features": [
+        "days_rest",
+        "is_b2b",
+        "is_big",
+        "is_guard",
+        "last10_avg",
+        "last10_std",
+        "last20_avg",
+        "last5_avg",
+        "last5_std",
+        "line_proxy",
+        "minutes_last10_avg",
+        "minutes_last5_avg",
+        "opp_allowed_ast",
+        "opp_allowed_pts",
+        "opp_allowed_reb",
+        "season_avg",
+        "trend_last5_minus_last10"
+      ]
+    },
+    "PR": {
+      "status": "trained",
+      "train_samples": 49410,
+      "test_samples": 12353,
+      "mae": 5.5374,
+      "proxy_line_hit_rate": {
+        "hit_rate": 0.5602,
+        "samples": 11986,
+        "pushes": 367
+      },
+      "real_line_hit_rate": {
+        "hit_rate": 0.5,
+        "samples": 4,
+        "pushes": 0
+      },
+      "model_path": "/Users/marvens/Desktop/Karchain/backend/models/prop_models/pr_rf.joblib",
+      "features": [
+        "days_rest",
+        "is_b2b",
+        "is_big",
+        "is_guard",
+        "last10_avg",
+        "last10_std",
+        "last20_avg",
+        "last5_avg",
+        "last5_std",
+        "line_proxy",
+        "minutes_last10_avg",
+        "minutes_last5_avg",
+        "opp_allowed_ast",
+        "opp_allowed_pts",
+        "opp_allowed_reb",
+        "season_avg",
+        "trend_last5_minus_last10"
+      ]
+    },
+    "PA": {
+      "status": "trained",
+      "train_samples": 49410,
+      "test_samples": 12353,
+      "mae": 5.0363,
+      "proxy_line_hit_rate": {
+        "hit_rate": 0.556,
+        "samples": 11963,
+        "pushes": 390
+      },
+      "real_line_hit_rate": {
+        "hit_rate": 0.5,
+        "samples": 4,
+        "pushes": 0
+      },
+      "model_path": "/Users/marvens/Desktop/Karchain/backend/models/prop_models/pa_rf.joblib",
+      "features": [
+        "days_rest",
+        "is_b2b",
+        "is_big",
+        "is_guard",
+        "last10_avg",
+        "last10_std",
+        "last20_avg",
+        "last5_avg",
+        "last5_std",
+        "line_proxy",
+        "minutes_last10_avg",
+        "minutes_last5_avg",
+        "opp_allowed_ast",
+        "opp_allowed_pts",
+        "opp_allowed_reb",
+        "season_avg",
+        "trend_last5_minus_last10"
+      ]
+    },
+    "RA": {
+      "status": "trained",
+      "train_samples": 49410,
+      "test_samples": 12353,
+      "mae": 2.6124,
+      "proxy_line_hit_rate": {
+        "hit_rate": 0.562,
+        "samples": 11573,
+        "pushes": 780
+      },
+      "real_line_hit_rate": {
+        "hit_rate": 0.0,
+        "samples": 0,
+        "pushes": 0
+      },
+      "model_path": "/Users/marvens/Desktop/Karchain/backend/models/prop_models/ra_rf.joblib",
+      "features": [
+        "days_rest",
+        "is_b2b",
+        "is_big",
+        "is_guard",
+        "last10_avg",
+        "last10_std",
+        "last20_avg",
+        "last5_avg",
+        "last5_std",
+        "line_proxy",
+        "minutes_last10_avg",
+        "minutes_last5_avg",
+        "opp_allowed_ast",
+        "opp_allowed_pts",
+        "opp_allowed_reb",
+        "season_avg",
+        "trend_last5_minus_last10"
+      ]
+    },
+    "STOCKS": {
+      "status": "trained",
+      "train_samples": 49410,
+      "test_samples": 12353,
+      "mae": 0.9518,
+      "proxy_line_hit_rate": {
+        "hit_rate": 0.5848,
+        "samples": 10393,
+        "pushes": 1960
+      },
+      "real_line_hit_rate": {
+        "hit_rate": 0.0,
+        "samples": 0,
+        "pushes": 0
+      },
+      "model_path": "/Users/marvens/Desktop/Karchain/backend/models/prop_models/stocks_rf.joblib",
+      "features": [
+        "days_rest",
+        "is_b2b",
+        "is_big",
+        "is_guard",
+        "last10_avg",
+        "last10_std",
+        "last20_avg",
+        "last5_avg",
+        "last5_std",
+        "line_proxy",
+        "minutes_last10_avg",
+        "minutes_last5_avg",
+        "opp_allowed_ast",
+        "opp_allowed_pts",
+        "opp_allowed_reb",
+        "season_avg",
+        "trend_last5_minus_last10"
+      ]
+    }
+  }
+}

@@ -20,6 +20,11 @@ from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
+def _current_nba_season(reference: Optional[datetime] = None) -> str:
+    reference = reference or datetime.utcnow()
+    start_year = reference.year if reference.month >= 7 else reference.year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
 class CircuitBreaker:
     """Circuit breaker pattern to prevent cascading failures"""
     
@@ -180,8 +185,9 @@ class EnhancedNBAApiClient:
         return result
     
     @CircuitBreaker(failure_threshold=3, recovery_timeout=300)
-    def get_player_clutch_stats(self, player_id: str, season: str = "2024-25") -> Dict[str, float]:
+    def get_player_clutch_stats(self, player_id: str, season: Optional[str] = None) -> Dict[str, float]:
         """Get real clutch time statistics with enhanced error handling"""
+        season = season or _current_nba_season()
         def _fetch_clutch_stats(player_id: str, season: str):
             url = f"{self.base_url}/stats/leaguedashplayerclutch"
             params = {
@@ -226,8 +232,9 @@ class EnhancedNBAApiClient:
         return self._cached_api_call('get_player_clutch_stats', _fetch_clutch_stats, player_id, season)
     
     @CircuitBreaker(failure_threshold=3, recovery_timeout=300)
-    def get_player_tracking_stats(self, player_id: str, season: str = "2024-25") -> Dict[str, float]:
+    def get_player_tracking_stats(self, player_id: str, season: Optional[str] = None) -> Dict[str, float]:
         """Get player tracking stats with enhanced error handling"""
+        season = season or _current_nba_season()
         def _fetch_tracking_stats(player_id: str, season: str):
             url = f"{self.base_url}/stats/leaguedashptstats"
             params = {
@@ -267,8 +274,9 @@ class EnhancedNBAApiClient:
         return self._cached_api_call('get_player_tracking_stats', _fetch_tracking_stats, player_id, season)
     
     @CircuitBreaker(failure_threshold=3, recovery_timeout=300)
-    def get_defensive_impact(self, player_id: str, season: str = "2024-25") -> Dict[str, float]:
+    def get_defensive_impact(self, player_id: str, season: Optional[str] = None) -> Dict[str, float]:
         """Get defensive impact statistics"""
+        season = season or _current_nba_season()
         def _fetch_defensive_stats(player_id: str, season: str):
             url = f"{self.base_url}/stats/leaguedashptdefend"
             params = {
@@ -309,8 +317,9 @@ class EnhancedNBAApiClient:
         return self._cached_api_call('get_defensive_impact', _fetch_defensive_stats, player_id, season)
     
     @CircuitBreaker(failure_threshold=3, recovery_timeout=300)
-    def get_live_player_stats(self, player_id: str, season: str = "2024-25") -> Dict[str, float]:
+    def get_live_player_stats(self, player_id: str, season: Optional[str] = None) -> Dict[str, float]:
         """Get current season player statistics"""
+        season = season or _current_nba_season()
         def _fetch_live_stats(player_id: str, season: str):
             url = f"{self.base_url}/stats/playerdashboardbyyearoveryear"
             params = {
@@ -413,10 +422,48 @@ class EnhancedNBAApiClient:
         return max(0.0, (fg_impact * 0.7 + volume_score * 0.3))
     
     def search_players(self, player_name: str) -> List[Dict[str, Any]]:
-        """Search for players by name (placeholder implementation)"""
-        # This would typically integrate with NBA's player search API
-        # For now, return empty list to avoid breaking existing code
-        return []
+        """Search players by name using NBA's commonallplayers endpoint."""
+        query = (player_name or "").strip().lower()
+        if not query:
+            return []
+
+        def _fetch_players():
+            url = f"{self.base_url}/stats/commonallplayers"
+            params = {
+                "IsOnlyCurrentSeason": "1",
+                "LeagueID": "00",
+                "Season": _current_nba_season(),
+            }
+            data = self._make_request(url, params=params)
+            if not data:
+                return []
+
+            try:
+                result_set = data.get("resultSets", [{}])[0]
+                headers = result_set.get("headers", [])
+                rows = result_set.get("rowSet", [])
+                players: List[Dict[str, Any]] = []
+                for row in rows:
+                    item = dict(zip(headers, row))
+                    full_name = str(item.get("DISPLAY_FIRST_LAST", "")).strip()
+                    if not full_name:
+                        continue
+                    if query not in full_name.lower():
+                        continue
+                    players.append({
+                        "player_id": item.get("PERSON_ID"),
+                        "name": full_name,
+                        "team": item.get("TEAM_NAME"),
+                        "team_abbr": item.get("TEAM_ABBREVIATION"),
+                        "active": item.get("ROSTERSTATUS") == 1,
+                    })
+
+                return players[:25]
+            except Exception as e:
+                logger.error(f"Error parsing player search results for '{player_name}': {e}")
+                return []
+
+        return self._cached_api_call("search_players", _fetch_players, query)
     
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""

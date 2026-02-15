@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { Users, Search, RotateCw, Award, DollarSign, Zap, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
@@ -33,8 +33,62 @@ interface Player {
     stats: PlayerStats[];
 }
 
+type CompositePropType =
+    | "points"
+    | "rebounds"
+    | "assists"
+    | "pts+reb+ast"
+    | "pts+reb"
+    | "pts+ast"
+    | "reb+ast"
+    | "stocks";
+
+const CUSTOM_PROP_OPTIONS: Array<{ value: CompositePropType; label: string }> = [
+    { value: "pts+reb+ast", label: "PRA (PTS + REB + AST)" },
+    { value: "pts+reb", label: "PR (PTS + REB)" },
+    { value: "pts+ast", label: "PA (PTS + AST)" },
+    { value: "reb+ast", label: "RA (REB + AST)" },
+    { value: "stocks", label: "Stocks (STL + BLK)" },
+    { value: "points", label: "Points" },
+    { value: "rebounds", label: "Rebounds" },
+    { value: "assists", label: "Assists" },
+];
+
+const NBA_TEAM_NAMES: Record<number, string> = {
+    1610612737: "Atlanta Hawks",
+    1610612738: "Boston Celtics",
+    1610612751: "Brooklyn Nets",
+    1610612766: "Charlotte Hornets",
+    1610612741: "Chicago Bulls",
+    1610612739: "Cleveland Cavaliers",
+    1610612742: "Dallas Mavericks",
+    1610612743: "Denver Nuggets",
+    1610612765: "Detroit Pistons",
+    1610612744: "Golden State Warriors",
+    1610612745: "Houston Rockets",
+    1610612754: "Indiana Pacers",
+    1610612746: "Los Angeles Clippers",
+    1610612747: "Los Angeles Lakers",
+    1610612763: "Memphis Grizzlies",
+    1610612748: "Miami Heat",
+    1610612749: "Milwaukee Bucks",
+    1610612750: "Minnesota Timberwolves",
+    1610612740: "New Orleans Pelicans",
+    1610612752: "New York Knicks",
+    1610612760: "Oklahoma City Thunder",
+    1610612753: "Orlando Magic",
+    1610612755: "Philadelphia 76ers",
+    1610612756: "Phoenix Suns",
+    1610612757: "Portland Trail Blazers",
+    1610612758: "Sacramento Kings",
+    1610612759: "San Antonio Spurs",
+    1610612761: "Toronto Raptors",
+    1610612762: "Utah Jazz",
+    1610612764: "Washington Wizards",
+};
+
 const fetchPlayers = async () => {
-    const { data } = await api.get<Player[]>("/players/");
+    const { data } = await api.get<Player[]>("/players/?limit=500");
     return data;
 };
 
@@ -45,31 +99,68 @@ const fetchPlayerProps = async (playerId: number) => {
 
 const formatOdds = (odds: number) => (odds > 0 ? `+${odds}` : `${odds}`);
 
+const getPropValue = (stat: PlayerStats, propType: CompositePropType): number => {
+    switch (propType) {
+        case "pts+reb+ast":
+            return (stat.points || 0) + (stat.rebounds || 0) + (stat.assists || 0);
+        case "pts+reb":
+            return (stat.points || 0) + (stat.rebounds || 0);
+        case "pts+ast":
+            return (stat.points || 0) + (stat.assists || 0);
+        case "reb+ast":
+            return (stat.rebounds || 0) + (stat.assists || 0);
+        case "stocks":
+            return (stat.steals || 0) + (stat.blocks || 0);
+        case "points":
+            return stat.points || 0;
+        case "rebounds":
+            return stat.rebounds || 0;
+        case "assists":
+            return stat.assists || 0;
+        default:
+            return 0;
+    }
+};
+
 // Calculate hit rate for a prop based on historical stats
 const calculateHitRate = (stats: PlayerStats[], propType: string, line: number): number => {
     if (!stats.length) return 0;
 
-    const key = propType === 'pts+reb+ast' ? null : propType as keyof PlayerStats;
     let hits = 0;
 
     for (const stat of stats) {
-        let value = 0;
-        if (propType === 'pts+reb+ast') {
-            value = (stat.points || 0) + (stat.rebounds || 0) + (stat.assists || 0);
-        } else if (key && stat[key] !== undefined) {
-            value = Number(stat[key]) || 0;
-        }
+        const value = getPropValue(stat, propType as CompositePropType);
         if (value > line) hits++;
     }
 
     return (hits / stats.length) * 100;
 };
 
+const inferPositionFromStats = (stats: PlayerStats[]): string => {
+    if (!stats.length) return "POS TBD";
+    const avg = (key: keyof PlayerStats) => {
+        const vals = stats.map(s => Number(s[key]) || 0);
+        return vals.reduce((a, b) => a + b, 0) / Math.max(vals.length, 1);
+    };
+    const rpg = avg("rebounds");
+    const apg = avg("assists");
+
+    if (apg >= 7 && rpg <= 6.5) return "PG";
+    if (apg >= 5.5 && rpg <= 7) return "SG";
+    if (rpg >= 9 && apg < 4.5) return "C";
+    if (rpg >= 7) return "PF";
+    if (apg >= 4 && rpg >= 5) return "SF";
+    return "G/F";
+};
+
 // Flip Card Component
 const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: Record<string, 'over' | 'under'>; onTogglePick: (key: string, side: 'over' | 'under') => void }> = ({ player, index, selectedPicks, onTogglePick }) => {
     const [isFlipped, setIsFlipped] = useState(false);
+    const [headshotFailed, setHeadshotFailed] = useState(false);
+    const [customPropType, setCustomPropType] = useState<CompositePropType>("pts+reb+ast");
+    const [customLine, setCustomLine] = useState<string>("25.5");
 
-    const { data: props } = useQuery({
+    const { data: props, isLoading: isPropsLoading, isFetched: isPropsFetched } = useQuery({
         queryKey: ["playerProps", player.id],
         queryFn: () => fetchPlayerProps(player.id),
         enabled: isFlipped,
@@ -77,6 +168,7 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
     });
 
     const getAvg = (key: keyof PlayerStats) => {
+        if (!player.stats || !player.stats.length) return "0.0";
         const validStats = player.stats.filter(s => s[key] !== undefined && s[key] !== null);
         if (!validStats.length) return "0.0";
         const sum = validStats.reduce((acc, s) => acc + (Number(s[key]) || 0), 0);
@@ -84,12 +176,33 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
     };
 
     const getMax = (key: keyof PlayerStats) => {
+        if (!player.stats || !player.stats.length) return 0;
         const validStats = player.stats.filter(s => s[key] !== undefined && s[key] !== null);
         if (!validStats.length) return 0;
         return Math.max(...validStats.map(s => Number(s[key]) || 0));
     };
 
-    const lastGame = player.stats.length > 0 ? player.stats[0] : null;
+    // Sort stats by date descending to get the true last game
+    const sortedStats = player.stats ? [...player.stats].sort((a, b) => {
+        const dateA = a.game_date ? new Date(a.game_date).getTime() : 0;
+        const dateB = b.game_date ? new Date(b.game_date).getTime() : 0;
+        return dateB - dateA;
+    }) : [];
+
+    const lastGame = sortedStats.length > 0 ? sortedStats[0] : null;
+    const fallbackHeadshot = player.headshot_url || `https://cdn.nba.com/headshots/nba/latest/260x190/${player.id}.png`;
+    const teamName = player.team_id ? (NBA_TEAM_NAMES[player.team_id] || `Team ${player.team_id}`) : "No Team";
+    const rawPosition = (player.position || "").trim();
+    const usingInferredPosition = !rawPosition || rawPosition === "N/A";
+    const displayPosition = usingInferredPosition ? inferPositionFromStats(player.stats || []) : rawPosition;
+    const lastFiveGames = sortedStats.slice(0, 5);
+    const lastTenGames = sortedStats.slice(0, 10);
+    const parsedLine = Number(customLine);
+    const validLine = Number.isFinite(parsedLine);
+    const lastFiveValues = lastFiveGames.map((game) => getPropValue(game, customPropType));
+    const lastFiveOverHits = validLine ? lastFiveValues.filter((v) => v > parsedLine).length : 0;
+    const lastFiveUnderHits = validLine ? lastFiveValues.filter((v) => v < parsedLine).length : 0;
+    const customPickKey = `custom-${player.id}-${customPropType}-${customLine}`;
 
     return (
         <motion.div
@@ -114,8 +227,13 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
                     {/* Header */}
                     <div className="flex items-start gap-3 mb-3">
                         <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary/20 to-primary/5 overflow-hidden shrink-0 ring-2 ring-primary/30">
-                            {player.headshot_url ? (
-                                <img src={player.headshot_url} alt={player.name} className="w-full h-full object-cover" />
+                            {!headshotFailed ? (
+                                <img
+                                    src={fallbackHeadshot}
+                                    alt={player.name}
+                                    className="w-full h-full object-cover"
+                                    onError={() => setHeadshotFailed(true)}
+                                />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-xl font-bold text-primary">
                                     {player.name.charAt(0)}
@@ -125,8 +243,16 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
                         <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-white text-sm leading-tight" title={player.name}>{player.name}</h3>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted">{player.position || "N/A"}</span>
+                                <span className="text-xs text-muted">
+                                    {displayPosition}{usingInferredPosition ? "*" : ""}
+                                </span>
                                 <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded">{player.sport}</span>
+                            </div>
+                            {usingInferredPosition && (
+                                <div className="text-[9px] text-muted/70">* inferred from recent stat profile</div>
+                            )}
+                            <div className="text-[10px] text-muted truncate mt-0.5" title={teamName}>
+                                {teamName}
                             </div>
                         </div>
                     </div>
@@ -215,6 +341,135 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
 
                     {/* Scrollable Props Area */}
                     <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ maxHeight: "calc(100% - 80px)" }}>
+                        <div
+                            className="bg-white/5 rounded-lg p-2 border border-white/10"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="text-[10px] font-bold text-primary uppercase mb-2">Custom Prop Builder</div>
+                            <div className="grid grid-cols-1 gap-2 mb-2">
+                                <select
+                                    value={customPropType}
+                                    onChange={(e) => setCustomPropType(e.target.value as CompositePropType)}
+                                    className="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-primary"
+                                >
+                                    {CUSTOM_PROP_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value} className="bg-slate-900">
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="number"
+                                    step="0.5"
+                                    value={customLine}
+                                    onChange={(e) => setCustomLine(e.target.value)}
+                                    className="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-primary"
+                                    placeholder="Set line (e.g. 26.5)"
+                                />
+                            </div>
+
+                            {lastFiveGames.length > 0 && validLine ? (
+                                <div className="space-y-2">
+                                    <div className="text-[10px] text-muted">Last 5 results vs line {parsedLine.toFixed(1)}</div>
+                                    <div className="grid grid-cols-5 gap-1">
+                                        {lastFiveValues.map((v, idx) => {
+                                            const over = v > parsedLine;
+                                            const under = v < parsedLine;
+                                            return (
+                                                <div
+                                                    key={`${player.id}-last5-${idx}`}
+                                                    className={`text-center rounded px-1 py-1 text-[10px] font-bold ${
+                                                        over ? "bg-emerald-500/20 text-emerald-300" : under ? "bg-red-500/20 text-red-300" : "bg-white/10 text-white"
+                                                    }`}
+                                                    title={`Game ${idx + 1}: ${v.toFixed(1)}`}
+                                                >
+                                                    {v.toFixed(1)}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-emerald-300">More hit: {lastFiveOverHits}/5</span>
+                                        <span className="text-red-300">Less hit: {lastFiveUnderHits}/5</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onTogglePick(customPickKey, "over"); }}
+                                            className={`rounded py-1.5 text-center transition-colors ${
+                                                selectedPicks[customPickKey] === "over"
+                                                    ? "bg-emerald-500/40 border-2 border-emerald-400"
+                                                    : "bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30"
+                                            }`}
+                                        >
+                                            <div className="text-[9px] text-muted">More</div>
+                                            <div className="text-xs font-bold text-emerald-300">{lastFiveOverHits}/5</div>
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onTogglePick(customPickKey, "under"); }}
+                                            className={`rounded py-1.5 text-center transition-colors ${
+                                                selectedPicks[customPickKey] === "under"
+                                                    ? "bg-red-500/40 border-2 border-red-400"
+                                                    : "bg-red-500/20 border border-red-500/30 hover:bg-red-500/30"
+                                            }`}
+                                        >
+                                            <div className="text-[9px] text-muted">Less</div>
+                                            <div className="text-xs font-bold text-red-300">{lastFiveUnderHits}/5</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-[10px] text-muted">Set a valid line and ensure at least 5 games are available.</div>
+                            )}
+                        </div>
+
+                        {lastTenGames.length > 0 && (
+                            <div className="bg-white/5 rounded-lg p-2 border border-white/10">
+                                <div className="text-[10px] font-bold text-white uppercase mb-2">Last 10 Game Logs</div>
+                                <div className="space-y-1.5">
+                                    {lastTenGames.map((game, idx) => {
+                                        const dateLabel = game.game_date
+                                            ? new Date(game.game_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                                            : `G${idx + 1}`;
+                                        const customValue = getPropValue(game, customPropType);
+                                        const verdict = validLine
+                                            ? (customValue > parsedLine ? "MORE" : customValue < parsedLine ? "LESS" : "PUSH")
+                                            : "";
+                                        return (
+                                            <div
+                                                key={`${player.id}-gamelog-${idx}`}
+                                                className="grid grid-cols-[44px_minmax(0,1fr)_28px_28px_28px_44px] gap-0.5 items-center text-[9px] border-b border-white/5 pb-1 last:border-b-0 last:pb-0 min-w-0"
+                                            >
+                                                <span className="text-muted">{dateLabel}</span>
+                                                <span className="text-muted truncate">{game.opponent || "OPP"}</span>
+                                                <span className="text-white text-right">{Number(game.points || 0).toFixed(0)}</span>
+                                                <span className="text-white text-right">{Number(game.rebounds || 0).toFixed(0)}</span>
+                                                <span className="text-white text-right">{Number(game.assists || 0).toFixed(0)}</span>
+                                                <span
+                                                    className={`text-right font-bold rounded px-1 py-0.5 ${
+                                                        verdict === "MORE"
+                                                            ? "text-emerald-300 bg-emerald-500/10"
+                                                            : verdict === "LESS"
+                                                                ? "text-red-300 bg-red-500/10"
+                                                                : "text-muted bg-white/5"
+                                                    }`}
+                                                >
+                                                    {validLine ? verdict : "-"}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="grid grid-cols-[44px_minmax(0,1fr)_28px_28px_28px_44px] gap-0.5 text-[8px] text-muted/70 mt-2 min-w-0">
+                                    <span>Date</span>
+                                    <span>Opp</span>
+                                    <span className="text-right">PTS</span>
+                                    <span className="text-right">REB</span>
+                                    <span className="text-right">AST</span>
+                                    <span className="text-right">Line</span>
+                                </div>
+                            </div>
+                        )}
+                        <div className="text-[10px] uppercase tracking-wider text-muted/70 mt-1">Market Props</div>
                         {props && props.length > 0 ? (
                             props.map((prop) => {
                                 const hitRate = calculateHitRate(player.stats, prop.prop_type, prop.line);
@@ -264,9 +519,13 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
                                     </div>
                                 );
                             })
-                        ) : (
+                        ) : isPropsLoading || !isPropsFetched ? (
                             <div className="text-center text-muted py-4 text-xs">
                                 Loading props...
+                            </div>
+                        ) : (
+                            <div className="text-center text-muted py-4 text-xs">
+                                No props available for this player.
                             </div>
                         )}
                     </div>
@@ -287,10 +546,23 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
 export const Players: React.FC = () => {
     const [search, setSearch] = useState("");
     const [selectedPicks, setSelectedPicks] = useState<Record<string, 'over' | 'under'>>({});
+    const [copyStatus, setCopyStatus] = useState("");
+    const queryClient = useQueryClient();
+    
     const { data: players, isLoading } = useQuery({
         queryKey: ["players"],
         queryFn: fetchPlayers
     });
+
+    // Listen for WebSocket updates
+    useEffect(() => {
+        const handlePlayersUpdate = () => {
+            queryClient.invalidateQueries({ queryKey: ["players"] });
+        };
+
+        window.addEventListener("playersUpdated", handlePlayersUpdate);
+        return () => window.removeEventListener("playersUpdated", handlePlayersUpdate);
+    }, [queryClient]);
 
     const togglePick = (key: string, side: 'over' | 'under') => {
         setSelectedPicks(prev => {
@@ -346,6 +618,42 @@ export const Players: React.FC = () => {
             {filtered?.length === 0 && !isLoading && (
                 <div className="text-center text-muted py-10">
                     No players found matching "{search}"
+                </div>
+            )}
+            {Object.keys(selectedPicks).length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-primary/40 rounded-2xl px-6 py-3 shadow-2xl shadow-black/50 flex items-center gap-4 z-50">
+                    <div className="text-sm text-white">
+                        <span className="font-bold text-primary">{Object.keys(selectedPicks).length}</span> pick{Object.keys(selectedPicks).length !== 1 ? "s" : ""} selected
+                    </div>
+                    {copyStatus && <div className="text-xs text-emerald-300">{copyStatus}</div>}
+                    <button
+                        onClick={async () => {
+                            const lines = Object.entries(selectedPicks).map(([key, side]) => {
+                                if (key.startsWith("custom-")) {
+                                    const parts = key.split("-");
+                                    const playerId = parts[1];
+                                    const line = parts[parts.length - 1];
+                                    const propType = parts.slice(2, parts.length - 1).join("-");
+                                    const label = CUSTOM_PROP_OPTIONS.find((o) => o.value === propType as CompositePropType)?.label || propType;
+                                    const playerName = players?.find((p) => String(p.id) === String(playerId))?.name || `Player ${playerId}`;
+                                    return `${playerName} | ${label} | Line ${line} | ${side.toUpperCase()}`;
+                                }
+                                return `${key}: ${side.toUpperCase()}`;
+                            });
+                            await navigator.clipboard.writeText(lines.join("\n"));
+                            setCopyStatus("Copied");
+                            window.setTimeout(() => setCopyStatus(""), 1500);
+                        }}
+                        className="text-xs text-primary hover:text-emerald-300 transition-colors"
+                    >
+                        Copy Picks
+                    </button>
+                    <button
+                        onClick={() => setSelectedPicks({})}
+                        className="text-xs text-muted hover:text-white transition-colors"
+                    >
+                        Clear All
+                    </button>
                 </div>
             )}
         </div>
