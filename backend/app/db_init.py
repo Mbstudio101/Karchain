@@ -3,6 +3,7 @@ import logging
 from sqlalchemy.orm import Session
 from app import models
 from app.database import SessionLocal, engine
+from app.player_identity_sync import backfill_player_identity_and_media
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,6 +21,25 @@ def init_db(db: Session):
         create_nba_teams(db)
     else:
         logger.info(f"Found {teams_count} teams in database.")
+
+    # Backfill player identity/media once data exists.
+    players_count = db.query(models.Player).count()
+    if players_count > 0:
+        missing_headshots = db.query(models.Player).filter(
+            (models.Player.headshot_url.is_(None)) | (models.Player.headshot_url == "")
+        ).count()
+        missing_team_ids = db.query(models.Player).filter(models.Player.team_id.is_(None)).count()
+        external_team_ids = db.query(models.Player).filter(models.Player.team_id >= 1000000000).count()
+
+        if missing_headshots > 0 or missing_team_ids > 0 or external_team_ids > 0:
+            logger.info(
+                "Running player identity/media backfill (missing_headshots=%s, missing_team_ids=%s, external_team_ids=%s)...",
+                missing_headshots,
+                missing_team_ids,
+                external_team_ids,
+            )
+            result = backfill_player_identity_and_media(db)
+            logger.info("Player backfill done: %s", result)
 
 def create_nba_teams(db: Session):
     """

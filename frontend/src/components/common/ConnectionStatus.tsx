@@ -22,7 +22,7 @@ export const ConnectionStatus: React.FC = () => {
       case 'connected':
         return 'Live';
       case 'connecting':
-        return 'Connecting...';
+        return 'Syncing...';
       case 'error':
         return 'Error';
       default:

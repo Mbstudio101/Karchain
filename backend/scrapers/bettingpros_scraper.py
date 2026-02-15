@@ -2,10 +2,9 @@ import asyncio
 import json
 import logging
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
-from sqlalchemy import case
 from .base_scraper import BaseScraper
 from app.database import SessionLocal
 from app.models import Team, Game, BettingOdds, Player, PlayerProps
@@ -112,6 +111,55 @@ class BettingProsScraper(BaseScraper):
             "WAS": "Washington Wizards"
         }
         self.events_cache = {} # event_id -> {home, away, game_id}
+
+    def _parse_event_datetime(self, event: Dict) -> Optional[datetime]:
+        """Best-effort parse of event start datetime from BettingPros payload."""
+        for key in ("date", "start_time", "starts_at", "start", "scheduled", "commence_time"):
+            raw = event.get(key)
+            if not raw:
+                continue
+            try:
+                if isinstance(raw, (int, float)):
+                    return datetime.utcfromtimestamp(raw)
+                text = str(raw).replace("Z", "+00:00")
+                dt = datetime.fromisoformat(text)
+                # Normalize to naive UTC for DB comparisons.
+                return dt.replace(tzinfo=None) if dt.tzinfo else dt
+            except Exception:
+                continue
+        return None
+
+    def _find_existing_scoreboard_game(
+        self,
+        db,
+        home_team_id: int,
+        away_team_id: int,
+        event_dt: Optional[datetime],
+    ) -> Optional[Game]:
+        """
+        Resolve BettingPros event to an existing game row (created by ESPN scoreboard sync).
+        Never creates games from BettingPros.
+        """
+        query = db.query(Game).filter(
+            Game.home_team_id == home_team_id,
+            Game.away_team_id == away_team_id
+        )
+
+        if event_dt:
+            # Tight window around event start to avoid cross-day mismatches.
+            start = event_dt - timedelta(hours=12)
+            end = event_dt + timedelta(hours=12)
+            return query.filter(
+                Game.game_date >= start,
+                Game.game_date < end
+            ).order_by(Game.game_date.asc()).first()
+
+        # Fallback: upcoming-only narrow window if event payload has no start timestamp.
+        now = datetime.utcnow()
+        return query.filter(
+            Game.game_date >= now - timedelta(hours=6),
+            Game.game_date <= now + timedelta(days=3)
+        ).order_by(Game.game_date.asc()).first()
 
     def _get_api(self, endpoint: str, params: Optional[Dict] = None) -> Optional[Dict]:
         try:
@@ -257,7 +305,7 @@ class BettingProsScraper(BaseScraper):
             target_team = player_team_name or event_info["home"]
             
             # Save the prop
-            self.save_player_prop(player_name, prop_type, line, over_odds, under_odds, target_team, "BettingPros")
+            self.save_player_prop(player_name, prop_type, line, over_odds, under_odds, target_team, "BettingPros", game_id=event_info.get("game_id"))
             
             logger.info(f"Saved {prop_type} prop for {player_name}: {line} (O: {over_odds}, U: {under_odds})")
             
@@ -328,6 +376,7 @@ class BettingProsScraper(BaseScraper):
             for e in events_list:
                 home_abbr = e.get("home")
                 away_abbr = e.get("visitor")
+                event_dt = self._parse_event_datetime(e)
                 participants = e.get("participants", [])
                 venue = e.get("venue", {})
                 
@@ -361,16 +410,12 @@ class BettingProsScraper(BaseScraper):
                             logger.info(f"Updated {team.name} record to {record_str}")
                 
                 if home_team and away_team:
-                    # Look for games from today and tomorrow
-                    from datetime import timedelta
-                    today = datetime.utcnow().date()
-                    tomorrow = today + timedelta(days=1)
-                    
-                    game = db.query(Game).filter(
-                        Game.home_team_id == home_team.id,
-                        Game.away_team_id == away_team.id,
-                        Game.game_date >= today
-                    ).first()
+                    game = self._find_existing_scoreboard_game(
+                        db,
+                        home_team.id,
+                        away_team.id,
+                        event_dt,
+                    )
                     
                     # Update game venue if available
                     if game and venue.get("name"):
@@ -382,8 +427,14 @@ class BettingProsScraper(BaseScraper):
                     self.events_cache[e["id"]] = {
                         "home": home_team.name,
                         "away": away_team.name,
+                        "home_abbr": home_abbr,
+                        "away_abbr": away_abbr,
                         "game_id": game.id if game else None
                     }
+                    if not game:
+                        logger.warning(
+                            f"Skipping BettingPros event {e.get('id')} ({away_name} @ {home_name}) - no matching scoreboard game"
+                        )
                 else:
                     # Log which teams failed to match
                     if not home_team:
@@ -395,6 +446,8 @@ class BettingProsScraper(BaseScraper):
                         self.events_cache[e["id"]] = {
                             "home": home_name,
                             "away": away_name,
+                            "home_abbr": home_abbr,
+                            "away_abbr": away_abbr,
                             "game_id": None
                         }
             
@@ -439,12 +492,15 @@ class BettingProsScraper(BaseScraper):
         event_id = offer.get("event_id")
         event_info = self.events_cache.get(event_id)
         if not event_info: return
+        if not event_info.get("game_id"): return
 
         # Initialize accumulated entry for this event if not exists
         if event_id not in accumulated:
             accumulated[event_id] = {
                 "home_team": event_info["home"],
                 "away_team": event_info["away"],
+                "event_id": event_id,
+                "game_id": event_info["game_id"],
                 "bookmaker": "BettingPros"
             }
 
@@ -644,6 +700,9 @@ class BettingProsScraper(BaseScraper):
         event_id = offer.get("event_id")
         event_info = self.events_cache.get(event_id)
         if not event_info: return
+        game_id = event_info.get("game_id")
+        if not game_id:
+            return
         
         participants = offer.get("participants", [])
         if not participants: return
@@ -708,27 +767,20 @@ class BettingProsScraper(BaseScraper):
             
             # Use player's team if available, otherwise fallback to home team (legacy behavior)
             target_team = player_team_name if player_team_name else event_info["home"]
-            self.save_player_prop(full_name, prop_type, line, over_odds, under_odds, target_team, sportsbook_name)
+            self.save_player_prop(full_name, prop_type, line, over_odds, under_odds, target_team, sportsbook_name, game_id=game_id)
 
     def save_odds(self, data: Dict):
         db = SessionLocal()
         try:
-            home_team = db.query(Team).filter(Team.name.ilike(f"%{data['home_team']}%")).first()
-            away_team = db.query(Team).filter(Team.name.ilike(f"%{data['away_team']}%")).first()
-            if not home_team or not away_team: return
-            
-            # Look for games from today and tomorrow
-            from datetime import timedelta
-            today = datetime.utcnow().date()
-            tomorrow = today + timedelta(days=1)
-            
-            # Get the MOST RECENT game (highest ID) to handle duplicate entries
-            game = db.query(Game).filter(
-                Game.home_team_id == home_team.id, 
-                Game.away_team_id == away_team.id, 
-                Game.game_date >= today
-            ).order_by(Game.id.desc()).first()
-            if not game: return
+            game_id = data.get("game_id")
+            if not game_id:
+                logger.warning(f"Skipping odds save for event {data.get('event_id')} - no matched scoreboard game_id")
+                return
+
+            game = db.query(Game).filter(Game.id == game_id).first()
+            if not game:
+                logger.warning(f"Skipping odds save for event {data.get('event_id')} - game_id {game_id} not found")
+                return
             
             # Determine spread_points: prefer home_spread, derive from away_spread if missing
             spread_pts = data.get("home_spread")
@@ -761,36 +813,20 @@ class BettingProsScraper(BaseScraper):
             )
             db.add(odds_entry)
             db.commit()
-            logger.info(f"Saved odds for {home_team.name} vs {away_team.name}")
+            logger.info(f"Saved odds for game_id {game.id}")
         except Exception as e:
             logger.error(f"Error saving odds: {e}")
             db.rollback()
         finally:
             db.close()
 
-    def save_player_prop(self, player_name: str, prop_type: str, line: float, over_odds: int, under_odds: int, team_name: str, sportsbook: str = "Consensus"):
+    def save_player_prop(self, player_name: str, prop_type: str, line: float, over_odds: int, under_odds: int, team_name: str, sportsbook: str = "Consensus", game_id: Optional[int] = None):
         db = SessionLocal()
         try:
-            # Look for games from today and tomorrow
-            from datetime import timedelta
-            today = datetime.utcnow().date()
-            tomorrow = today + timedelta(days=2)  # Extend to 2 days ahead
-            
-            # Find games where the team is playing (home OR away)
-            # Prioritize Scheduled games over Final games, and pick the closest upcoming game
-            game = db.query(Game).join(Team, 
-                ((Game.home_team_id == Team.id) | (Game.away_team_id == Team.id))
-            ).filter(
-                Team.name.ilike(f"%{team_name}%"),
-                Game.game_date >= today,
-                Game.game_date <= tomorrow
-            ).order_by(
-                # Prioritize Scheduled games (not started yet)
-                case((Game.status == "Scheduled", 0), else_=1),
-                # Then pick the closest upcoming game
-                Game.game_date
-            ).first()
-            if not game: return
+            game = db.query(Game).filter(Game.id == game_id).first() if game_id else None
+            if not game:
+                logger.warning(f"Skipping prop save for {player_name} ({prop_type}) - no matched scoreboard game_id")
+                return
 
             player = db.query(Player).filter(Player.name.ilike(f"%{player_name}%")).first()
             
@@ -882,28 +918,10 @@ class BettingProsScraper(BaseScraper):
                 # Strategy 1: Check events cache if we have it
                 if event_id in self.events_cache:
                     game_id = self.events_cache[event_id].get("game_id")
-                
-                # Strategy 2: Look up by team and date if no game_id yet
-                if not game_id and team_abbr:
-                    # Map abbreviation to full name if possible
-                    team_name = self.NBA_TEAMS.get(team_abbr)
-                    if team_name:
-                        from datetime import timedelta
-                        today = datetime.utcnow().date()
-                        tomorrow = today + timedelta(days=2)
-                        
-                        # Find game where this team is home or away
-                        game = db.query(Game).join(
-                            Team, 
-                            (Game.home_team_id == Team.id) | (Game.away_team_id == Team.id)
-                        ).filter(
-                            Team.name == team_name,
-                            Game.game_date >= today,
-                            Game.game_date <= tomorrow
-                        ).first()
-                        
-                        if game:
-                            game_id = game.id
+
+                # Scoreboard-first policy: do not attach analyzer props to inferred team/date games.
+                if not game_id:
+                    continue
 
                 # Extract projection and analyzer data
                 projection = prop.get("projection", {})
@@ -983,7 +1001,7 @@ class BettingProsScraper(BaseScraper):
                 
                 if existing_prop:
                     # Update with analyzer data
-                    existing_prop.game_id = game_id  # Update game_id if we found it
+                    existing_prop.game_id = game_id
                     existing_prop.star_rating = star_rating
                     existing_prop.bp_ev = bp_ev
                     existing_prop.performance_pct = perf_pct

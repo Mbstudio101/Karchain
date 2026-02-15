@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LayoutDashboard, Target, History, Settings, Users, Search, Layers, Brain, TrendingUp, Shield } from "lucide-react";
+import { LayoutDashboard, Target, History, Users, Search, Layers, Brain, TrendingUp, Shield } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -66,7 +66,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     return (
         <div className="flex h-full w-full bg-background overflow-hidden font-sans text-foreground selection:bg-primary/30">
             {/* Sidebar */}
-            <div className="w-64 shrink-0 border-r border-secondary/20 bg-linear-to-b from-[#0e1737] to-[#0a1128] backdrop-blur-xl flex flex-col p-6 z-20 shadow-[inset_-1px_0_0_rgba(211,170,74,0.1)]">
+            <div className="w-64 shrink-0 min-h-0 overflow-y-auto border-r border-secondary/20 bg-linear-to-b from-[#0e1737] to-[#0a1128] backdrop-blur-xl flex flex-col p-6 z-20 shadow-[inset_-1px_0_0_rgba(211,170,74,0.1)]">
                 <div className="flex items-center gap-2 mb-10 px-2">
                     <div className="w-8 h-8 rounded-lg bg-linear-to-br from-secondary to-amber-300 flex items-center justify-center shadow-lg shadow-secondary/30">
                         <Target className="text-slate-900" size={18} />
@@ -86,7 +86,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     <SidebarItem icon={TrendingUp} label="Self Improvement" path="/self-improvement" />
                     <SidebarItem icon={Target} label="Analysis" path="/analysis" />
                     <SidebarItem icon={History} label="History" path="/history" />
-                    <SidebarItem icon={Settings} label="Settings" path="/settings" />
                 </nav>
 
                 <div className="mt-auto pt-6 border-t border-secondary/20">

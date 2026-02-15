@@ -18,7 +18,7 @@ interface WebSocketProviderProps {
 
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ 
   children, 
-  wsUrl = 'ws://localhost:8000/ws' 
+  wsUrl = 'ws://127.0.0.1:8000/ws' 
 }) => {
   const websocket = useWebSocket(wsUrl);
 

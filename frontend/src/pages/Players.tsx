@@ -33,6 +33,11 @@ interface Player {
     stats: PlayerStats[];
 }
 
+interface Team {
+    id: number;
+    name: string;
+}
+
 type CompositePropType =
     | "points"
     | "rebounds"
@@ -89,6 +94,11 @@ const NBA_TEAM_NAMES: Record<number, string> = {
 
 const fetchPlayers = async () => {
     const { data } = await api.get<Player[]>("/players/?limit=500");
+    return data;
+};
+
+const fetchTeams = async () => {
+    const { data } = await api.get<Team[]>("/teams/?limit=100");
     return data;
 };
 
@@ -154,7 +164,13 @@ const inferPositionFromStats = (stats: PlayerStats[]): string => {
 };
 
 // Flip Card Component
-const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: Record<string, 'over' | 'under'>; onTogglePick: (key: string, side: 'over' | 'under') => void }> = ({ player, index, selectedPicks, onTogglePick }) => {
+const PlayerFlipCard: React.FC<{
+    player: Player;
+    index: number;
+    selectedPicks: Record<string, 'over' | 'under'>;
+    onTogglePick: (key: string, side: 'over' | 'under') => void;
+    teamNameById: Record<number, string>;
+}> = ({ player, index, selectedPicks, onTogglePick, teamNameById }) => {
     const [isFlipped, setIsFlipped] = useState(false);
     const [headshotFailed, setHeadshotFailed] = useState(false);
     const [customPropType, setCustomPropType] = useState<CompositePropType>("pts+reb+ast");
@@ -190,8 +206,11 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
     }) : [];
 
     const lastGame = sortedStats.length > 0 ? sortedStats[0] : null;
-    const fallbackHeadshot = player.headshot_url || `https://cdn.nba.com/headshots/nba/latest/260x190/${player.id}.png`;
-    const teamName = player.team_id ? (NBA_TEAM_NAMES[player.team_id] || `Team ${player.team_id}`) : "No Team";
+    const hasLikelyNbaId = player.id >= 100000;
+    const fallbackHeadshot = player.headshot_url || (hasLikelyNbaId ? `https://cdn.nba.com/headshots/nba/latest/260x190/${player.id}.png` : null);
+    const teamName = player.team_id
+        ? (teamNameById[player.team_id] || NBA_TEAM_NAMES[player.team_id] || `Team ${player.team_id}`)
+        : "No Team";
     const rawPosition = (player.position || "").trim();
     const usingInferredPosition = !rawPosition || rawPosition === "N/A";
     const displayPosition = usingInferredPosition ? inferPositionFromStats(player.stats || []) : rawPosition;
@@ -227,7 +246,7 @@ const PlayerFlipCard: React.FC<{ player: Player; index: number; selectedPicks: R
                     {/* Header */}
                     <div className="flex items-start gap-3 mb-3">
                         <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary/20 to-primary/5 overflow-hidden shrink-0 ring-2 ring-primary/30">
-                            {!headshotFailed ? (
+                            {!headshotFailed && fallbackHeadshot ? (
                                 <img
                                     src={fallbackHeadshot}
                                     alt={player.name}
@@ -553,6 +572,11 @@ export const Players: React.FC = () => {
         queryKey: ["players"],
         queryFn: fetchPlayers
     });
+    const { data: teams } = useQuery({
+        queryKey: ["teams", "players-page"],
+        queryFn: fetchTeams,
+        staleTime: 1000 * 60 * 10,
+    });
 
     // Listen for WebSocket updates
     useEffect(() => {
@@ -577,6 +601,10 @@ export const Players: React.FC = () => {
     const filtered = players?.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
     );
+    const teamNameById = (teams || []).reduce<Record<number, string>>((acc, t) => {
+        acc[t.id] = t.name;
+        return acc;
+    }, {});
 
     return (
         <div className="space-y-6">
@@ -610,7 +638,14 @@ export const Players: React.FC = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filtered?.map((player, i) => (
-                        <PlayerFlipCard key={player.id} player={player} index={i} selectedPicks={selectedPicks} onTogglePick={togglePick} />
+                        <PlayerFlipCard
+                            key={player.id}
+                            player={player}
+                            index={i}
+                            selectedPicks={selectedPicks}
+                            onTogglePick={togglePick}
+                            teamNameById={teamNameById}
+                        />
                     ))}
                 </div>
             )}

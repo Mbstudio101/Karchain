@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import case, exists, select
 from typing import List, Optional
 from datetime import date, datetime, timedelta
 from .. import models, schemas
@@ -11,6 +10,9 @@ router = APIRouter(
     prefix="/games",
     tags=["games"]
 )
+
+_ESPN_SYNC_COOLDOWN_SECONDS = 60
+_last_sync_by_date: dict[date, datetime] = {}
 
 
 def _sync_espn_for_date(target_date: date):
@@ -25,6 +27,18 @@ def _sync_espn_for_date(target_date: date):
     except Exception as e:
         print(f"ESPN Sync failed for {target_date}: {e}")
 
+def _sync_espn_for_date_if_stale(target_date: date):
+    """
+    Throttle date syncs so frequent frontend polling doesn't re-run ESPN sync
+    on every request.
+    """
+    now = datetime.utcnow()
+    last_sync = _last_sync_by_date.get(target_date)
+    if last_sync and (now - last_sync).total_seconds() < _ESPN_SYNC_COOLDOWN_SECONDS:
+        return
+    _sync_espn_for_date(target_date)
+    _last_sync_by_date[target_date] = now
+
 
 def _sync_espn_today_and_tomorrow(timezone_name: str = "America/New_York"):
     """Sync today and tomorrow to catch upcoming games."""
@@ -37,6 +51,7 @@ def _sync_espn_today_and_tomorrow(timezone_name: str = "America/New_York"):
 def read_games(
     request: Request,
     date: Optional[date] = None,
+    odds_only: bool = False,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)
@@ -49,8 +64,10 @@ def read_games(
     if date is None:
         date = get_current_gameday(client_tz)
 
-    # 1. Sync with ESPN for real-time scores (today + tomorrow)
-    _sync_espn_today_and_tomorrow(client_tz)
+    # 1. Sync with ESPN for selected date so calendar forward/backward is accurate.
+    # Also sync next day to keep near-future navigation warm.
+    _sync_espn_for_date_if_stale(date)
+    _sync_espn_for_date_if_stale(date + timedelta(days=1))
 
     # The ESPN sync uses its own session, so we need to expire
     # our session's cache to see the updated scores
@@ -73,22 +90,20 @@ def read_games(
     #    so we use get_gameday_range() which accounts for this.
     start_utc, end_utc = get_gameday_range(date, client_tz)
 
-    has_odds = exists(
-        select(models.BettingOdds.id).where(
-            models.BettingOdds.game_id == models.Game.id
-        )
-    )
-
-    games = db.query(models.Game).options(
+    query = db.query(models.Game).options(
         joinedload(models.Game.home_team).joinedload(models.Team.stats),
         joinedload(models.Game.away_team).joinedload(models.Team.stats),
         joinedload(models.Game.odds),
         joinedload(models.Game.recommendations)
     ).filter(
         models.Game.game_date >= start_utc,
-        models.Game.game_date < end_utc,
-        has_odds  # Only return games that have betting odds
-    ).order_by(
+        models.Game.game_date < end_utc
+    )
+
+    if odds_only:
+        query = query.filter(models.Game.odds.any())
+
+    games = query.order_by(
         models.Game.game_date.asc()
     ).offset(skip).limit(limit).all()
 
@@ -121,7 +136,7 @@ def read_game(game_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Game not found")
 
     # Trigger a targeted ESPN sync for this game's date
-    _sync_espn_for_date(game.game_date.date() if isinstance(game.game_date, datetime) else game.game_date)
+    _sync_espn_for_date_if_stale(game.game_date.date() if isinstance(game.game_date, datetime) else game.game_date)
 
     # Expire cache so we see updated scores from the sync
     db.expire_all()

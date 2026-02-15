@@ -20,49 +20,63 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { WebSocketProvider } from "./context/WebSocketContext";
 import { DesktopTitlebar } from "./components/layout/DesktopTitlebar";
 
-const queryClient = new QueryClient();
-const isDesktop = typeof window !== "undefined" && (window as any).__TAURI__ !== undefined;
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 30,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+const isDesktop =
+  typeof window !== "undefined" &&
+  (((window as any).__TAURI_INTERNALS__ !== undefined) || navigator.userAgent.includes("Tauri"));
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WebSocketProvider>
-        <div className="h-screen w-full overflow-hidden">
-          <DesktopTitlebar />
-          <div className={isDesktop ? "h-[calc(100vh-2.5rem)]" : "h-full"}>
-            <Router>
-              <AuthProvider>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<SignUp />} />
+      <div className="h-screen w-full overflow-hidden">
+        <DesktopTitlebar />
+        <div className={isDesktop ? "h-[calc(100vh-2.5rem)]" : "h-full"}>
+          <Router>
+            <AuthProvider>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<SignUp />} />
 
-                  {/* Protected Routes */}
-                  <Route element={<ProtectedRoute />}>
-                    <Route path="/" element={<AppLayout />}>
-                      <Route index element={<Dashboard />} />
-                      <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="players" element={<Players />} />
-                      <Route path="teams" element={<Teams />} />
-                      <Route path="props-finder" element={<PropsFinder />} />
-                      <Route path="analysis" element={<Analysis />} />
-                      <Route path="self-improvement" element={<SelfImprovement />} />
-                      <Route path="history" element={<History />} />
-                      <Route path="games/:id" element={<GameDetails />} />
-                      <Route path="settings" element={<Settings />} />
-                      <Route path="mixed-parlay" element={<MixedParlay />} />
-                      <Route path="genius-picks" element={<GeniusPicksPage />} />
-                    </Route>
+                {/* Protected Routes */}
+                <Route
+                  element={
+                    <WebSocketProvider>
+                      <ProtectedRoute />
+                    </WebSocketProvider>
+                  }
+                >
+                  <Route path="/" element={<AppLayout />}>
+                    <Route index element={<Dashboard />} />
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="players" element={<Players />} />
+                    <Route path="teams" element={<Teams />} />
+                    <Route path="props-finder" element={<PropsFinder />} />
+                    <Route path="analysis" element={<Analysis />} />
+                    <Route path="self-improvement" element={<SelfImprovement />} />
+                    <Route path="history" element={<History />} />
+                    <Route path="games/:id" element={<GameDetails />} />
+                    <Route path="settings" element={<Settings />} />
+                    <Route path="mixed-parlay" element={<MixedParlay />} />
+                    <Route path="genius-picks" element={<GeniusPicksPage />} />
                   </Route>
+                </Route>
 
-                  {/* Catch-all for unmatched routes */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </AuthProvider>
-            </Router>
-          </div>
+                {/* Catch-all for unmatched routes */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </AuthProvider>
+          </Router>
         </div>
-      </WebSocketProvider>
+      </div>
     </QueryClientProvider>
   );
 }

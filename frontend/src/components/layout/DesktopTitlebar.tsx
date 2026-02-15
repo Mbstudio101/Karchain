@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Minus, Square, X } from "lucide-react";
+import { Minus, Settings, Square, X } from "lucide-react";
 
 const isDesktop =
   typeof window !== "undefined" &&
@@ -7,7 +7,7 @@ const isDesktop =
 
 export const DesktopTitlebar: React.FC = () => {
   const [appWindow, setAppWindow] = useState<any>(null);
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -19,7 +19,7 @@ export const DesktopTitlebar: React.FC = () => {
       if (!mounted) return;
 
       setAppWindow(current);
-      setIsMaximized(await current.isMaximized());
+      setIsFullscreen(await current.isFullscreen());
     };
 
     init();
@@ -31,7 +31,7 @@ export const DesktopTitlebar: React.FC = () => {
 
   if (!isDesktop) return null;
 
-  const handleWindowAction = async (action: "minimize" | "maximize" | "close") => {
+  const handleWindowAction = async (action: "minimize" | "fullscreen" | "close") => {
     if (!appWindow) return;
 
     if (action === "minimize") {
@@ -39,15 +39,10 @@ export const DesktopTitlebar: React.FC = () => {
       return;
     }
 
-    if (action === "maximize") {
-      const maximized = await appWindow.isMaximized();
-      if (maximized) {
-        await appWindow.unmaximize();
-        setIsMaximized(false);
-      } else {
-        await appWindow.maximize();
-        setIsMaximized(true);
-      }
+    if (action === "fullscreen") {
+      const fullscreen = await appWindow.isFullscreen();
+      await appWindow.setFullscreen(!fullscreen);
+      setIsFullscreen(!fullscreen);
       return;
     }
 
@@ -61,13 +56,27 @@ export const DesktopTitlebar: React.FC = () => {
       <div
         data-tauri-drag-region
         className="flex items-center gap-2 min-w-0 flex-1 h-full"
-        onDoubleClick={() => handleWindowAction("maximize")}
+        onDoubleClick={() => handleWindowAction("fullscreen")}
       >
         <div className="w-2 h-2 rounded-full bg-secondary/80" />
         <span className="text-xs font-semibold tracking-[0.14em] text-secondary truncate">KARCHAIN CASINO DESK</span>
       </div>
 
       <div className="flex items-center gap-1 ml-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (window.location.pathname !== "/settings") {
+              window.history.pushState({}, "", "/settings");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }
+          }}
+          className="w-7 h-7 rounded-md text-muted hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center mr-1"
+          aria-label="Settings"
+          title="Settings"
+        >
+          <Settings size={13} />
+        </button>
         <button
           type="button"
           onClick={() => handleWindowAction("minimize")}
@@ -79,10 +88,10 @@ export const DesktopTitlebar: React.FC = () => {
         </button>
         <button
           type="button"
-          onClick={() => handleWindowAction("maximize")}
+          onClick={() => handleWindowAction("fullscreen")}
           className="w-7 h-7 rounded-md text-muted hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
-          aria-label={isMaximized ? "Restore" : "Maximize"}
-          title={isMaximized ? "Restore" : "Maximize"}
+          aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
         >
           <Square size={11} />
         </button>

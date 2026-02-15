@@ -9,25 +9,97 @@ interface GameCardProps {
     game: Game;
 }
 
+const TEAM_ABBR_BY_NAME: Record<string, string> = {
+    "Atlanta Hawks": "atl",
+    "Boston Celtics": "bos",
+    "Brooklyn Nets": "bkn",
+    "Charlotte Hornets": "cha",
+    "Chicago Bulls": "chi",
+    "Cleveland Cavaliers": "cle",
+    "Dallas Mavericks": "dal",
+    "Denver Nuggets": "den",
+    "Detroit Pistons": "det",
+    "Golden State Warriors": "gs",
+    "Houston Rockets": "hou",
+    "Indiana Pacers": "ind",
+    "LA Clippers": "lac",
+    "Los Angeles Clippers": "lac",
+    "Los Angeles Lakers": "lal",
+    "LA Lakers": "lal",
+    "Memphis Grizzlies": "mem",
+    "Miami Heat": "mia",
+    "Milwaukee Bucks": "mil",
+    "Minnesota Timberwolves": "min",
+    "New Orleans Pelicans": "no",
+    "New York Knicks": "ny",
+    "Oklahoma City Thunder": "okc",
+    "Orlando Magic": "orl",
+    "Philadelphia 76ers": "phi",
+    "Phoenix Suns": "phx",
+    "Portland Trail Blazers": "por",
+    "Sacramento Kings": "sac",
+    "San Antonio Spurs": "sa",
+    "Toronto Raptors": "tor",
+    "Utah Jazz": "utah",
+    "Washington Wizards": "wsh"
+};
+
+const resolveTeamLogoUrl = (name: string, explicitUrl: string | null) => {
+    if (explicitUrl && explicitUrl.trim().length > 0) return explicitUrl;
+    const abbr = TEAM_ABBR_BY_NAME[name];
+    if (!abbr) return null;
+    return `https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/${abbr}.png`;
+};
+
+const teamInitials = (name: string) =>
+    name
+        .split(" ")
+        .filter(Boolean)
+        .slice(-2)
+        .map((p) => p[0]?.toUpperCase() || "")
+        .join("");
+
+const TeamBadge = ({ logoUrl, name }: { logoUrl: string | null; name: string }) => {
+    const [imgFailed, setImgFailed] = React.useState(false);
+    const resolvedLogoUrl = resolveTeamLogoUrl(name, logoUrl);
+
+    if (resolvedLogoUrl && !imgFailed) {
+        return (
+            <img
+                src={resolvedLogoUrl}
+                alt={name}
+                className="w-9 h-9 object-contain shrink-0"
+                onError={() => setImgFailed(true)}
+            />
+        );
+    }
+
+    return (
+        <div className="w-9 h-9 rounded-full shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-[11px] font-black text-white/90">
+            {teamInitials(name)}
+        </div>
+    );
+};
+
 const OddsPill = ({ value, price, type, label }: { value: string | number | null, price: number | null, type: 'spread' | 'total' | 'money', label?: string }) => {
     if (value === null && price === null) return <div className="h-14 bg-white/5 rounded-lg animate-pulse border border-white/10" />;
 
     return (
-        <div className="flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 hover:border-secondary/35 rounded-lg p-2 transition-all group h-14 relative overflow-hidden">
+        <div className="flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 hover:border-secondary/35 rounded-lg p-2 transition-all group min-h-16 relative overflow-hidden">
             {label && (
-                <span className="absolute top-1 left-1.5 text-[8px] uppercase text-muted/50 font-bold tracking-tighter">
+                <span className="text-[9px] uppercase text-muted/75 font-black tracking-wide mb-0.5">
                     {label}
                 </span>
             )}
-            <div className="flex items-baseline gap-1 mt-1">
-                    <span className={cn(
-                        "text-sm font-bold",
-                        type === 'spread' ? (Number(value) < 0 ? "text-primary" : "text-foreground") : "text-foreground"
-                    )}>
+            <div className="flex flex-col items-center leading-tight">
+                <span className={cn(
+                    "text-sm font-bold",
+                    type === 'spread' ? (Number(value) < 0 ? "text-primary" : "text-foreground") : "text-foreground"
+                )}>
                     {type === 'spread' && Number(value) > 0 ? "+" : ""}{value}
                 </span>
                 {price !== null && (
-                    <span className="text-[10px] text-muted group-hover:text-primary transition-colors">
+                    <span className="text-[10px] text-muted group-hover:text-primary transition-colors mt-0.5">
                         {price > 0 ? "+" : ""}{price}
                     </span>
                 )}
@@ -71,7 +143,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -5, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)" }}
-            className="bg-linear-to-br from-[#0f1838] via-card to-[#0b1330] border border-white/10 rounded-2xl p-5 relative overflow-hidden group"
+            className="bg-linear-to-br from-[#0f1838] via-card to-[#0b1330] border border-white/10 rounded-2xl p-4 md:p-5 relative overflow-hidden group"
         >
             {/* Background Accent */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-secondary/20 transition-colors" />
@@ -111,38 +183,48 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
             </div>
 
             {/* Teams & Scores */}
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-5 relative z-10">
-                <div className="flex flex-col items-start gap-2 overflow-hidden">
-                    <div className="flex items-center gap-2 w-full">
-                        {game.away_team.logo_url && (
-                            <img src={game.away_team.logo_url} alt={game.away_team.name} className="w-8 h-8 object-contain shrink-0" />
-                        )}
-                        <span className="text-sm font-bold text-white leading-tight line-clamp-2" title={game.away_team.name}>
-                            {game.away_team.name}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="flex justify-center min-w-[60px]">
-                    {game.status !== "Scheduled" ? (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/10">
-                            <span className={`text-xl font-bold tracking-tight ${game.away_score > game.home_score ? 'text-white' : 'text-muted'}`}>{game.away_score}</span>
-                            <span className="text-muted text-xs">-</span>
-                            <span className={`text-xl font-bold tracking-tight ${game.home_score > game.away_score ? 'text-white' : 'text-muted'}`}>{game.home_score}</span>
+            <div className="mb-5 relative z-10">
+                <div className="rounded-xl bg-black/20 border border-white/10 p-2.5 md:p-3">
+                    <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                        <div className="min-w-0 flex items-center gap-2.5">
+                            <TeamBadge logoUrl={game.away_team.logo_url} name={game.away_team.name} />
+                            <div className="min-w-0">
+                                <div className="text-[11px] uppercase tracking-wider text-muted/70 font-semibold">Away</div>
+                                <div className="text-sm font-bold text-white truncate" title={game.away_team.name}>
+                                    {game.away_team.name}
+                                </div>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-muted text-xs font-mono font-bold">@</div>
-                    )}
-                </div>
+                        <div className={cn(
+                            "text-2xl font-black tabular-nums tracking-tight min-w-[2ch] text-right",
+                            game.status !== "Scheduled" && game.away_score > game.home_score ? "text-white" : "text-muted"
+                        )}>
+                            {game.status !== "Scheduled" ? game.away_score : "-"}
+                        </div>
+                    </div>
 
-                <div className="flex flex-col items-end gap-2 overflow-hidden text-right">
-                    <div className="flex flex-row-reverse items-center gap-2 w-full">
-                        {game.home_team.logo_url && (
-                            <img src={game.home_team.logo_url} alt={game.home_team.name} className="w-8 h-8 object-contain shrink-0" />
-                        )}
-                        <span className="text-sm font-bold text-white leading-tight line-clamp-2" title={game.home_team.name}>
-                            {game.home_team.name}
-                        </span>
+                    <div className="flex items-center justify-center py-1.5">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-muted/65">
+                            {game.status === "Scheduled" ? "VS" : "Final Score"}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                        <div className="min-w-0 flex items-center gap-2.5">
+                            <TeamBadge logoUrl={game.home_team.logo_url} name={game.home_team.name} />
+                            <div className="min-w-0">
+                                <div className="text-[11px] uppercase tracking-wider text-muted/70 font-semibold">Home</div>
+                                <div className="text-sm font-bold text-white truncate" title={game.home_team.name}>
+                                    {game.home_team.name}
+                                </div>
+                            </div>
+                        </div>
+                        <div className={cn(
+                            "text-2xl font-black tabular-nums tracking-tight min-w-[2ch] text-right",
+                            game.status !== "Scheduled" && game.home_score > game.away_score ? "text-white" : "text-muted"
+                        )}>
+                            {game.status !== "Scheduled" ? game.home_score : "-"}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -157,11 +239,17 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                     </div>
 
                     {/* Away Odds */}
+                    <div className="col-span-3 text-[10px] font-black uppercase tracking-wider text-muted/75 px-1 mt-0.5">
+                        Away
+                    </div>
                     <OddsPill value={odds.spread_points} price={odds.away_spread_price} type="spread" />
                     <OddsPill label="Over" value={odds.total_points} price={odds.over_price} type="total" />
                     <OddsPill value={odds.away_moneyline} price={null} type="money" />
 
                     {/* Home Odds */}
+                    <div className="col-span-3 text-[10px] font-black uppercase tracking-wider text-muted/75 px-1 mt-1">
+                        Home
+                    </div>
                     {/* Convention: spread_points is usually given for the home team or away team. 
                         In our scraper, we store it as is. Usually if +X for away, then -X for home. */}
                     <OddsPill value={odds.spread_points !== null ? -odds.spread_points : null} price={odds.home_spread_price} type="spread" />
